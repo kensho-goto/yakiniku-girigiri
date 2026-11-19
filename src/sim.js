@@ -112,6 +112,22 @@
       rule: {},
       stars: [3, 7, 10] },
   ];
+  // ===== 店のレベルと道具 =====
+  // うまく焼けた枚数の合計が「店の経験」。レベルが1つ上がるごとに、道具を1つ強くできる（各3段）
+  const LV_EXP = [0, 5, 12, 20, 30, 42, 56, 72, 90, 110, 132, 156, 182]; // Lv1〜Lv13 に要る経験
+  const TOOLS = {
+    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼ける速さ +10%', '焼ける速さ +20%', '焼ける速さ +30%'], speed: [1, 1.1, 1.2, 1.3] },
+    ami: { name: '網', icon: '🥩', lvName: ['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], effect: ['', '焼けすぎてからの進み −15%', '焼けすぎてからの進み −30%', '焼けすぎてからの進み −45%'], over: [1, 0.85, 0.7, 0.55] },
+    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱の待ちが1/4・冷めにくい', '余熱が一瞬・もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
+    tong: { name: 'トング', icon: '🥢', lvName: ['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], effect: ['', '返しどきに肉がピョンと跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'] },
+  };
+  const TOOL_KEYS = Object.keys(TOOLS);
+  function levelOf(exp) { let lv = 1; LV_EXP.forEach((v, i) => { if (exp >= v) lv = i + 1; }); return lv; }
+  function toolUp(tools) {
+    const t = {}; TOOL_KEYS.forEach((k) => { t[k] = Math.max(0, Math.min(3, (tools && tools[k]) | 0)); });
+    return { lv: t, speed: TOOLS.sumi.speed[t.sumi], over: TOOLS.ami.over[t.ami], rest: TOOLS.sara.rest[t.sara], cool: TOOLS.sara.cool[t.sara] };
+  }
+
   // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
   function ruleOf(stage) {
     const st = STAGES[stage - 1];
@@ -147,6 +163,7 @@
     const R = ruleOf(stage);
     const g = {
       stage, R,
+      up: toolUp(opts.tools), // 道具（店のレベルで強くしたもの）
       seed,
       rng: mulberry32(seed),
       state: 'ready', // ready（最初の1枚を置くまで時間は進まない）→ play → over
@@ -255,7 +272,7 @@
       const carry = [0, 0];
       carry[1 - m.up] = c;
       carry[m.up] = c * 0.6;
-      m.rest = { t: 0, dur: T.rest, carry };
+      m.rest = { t: 0, dur: T.rest * g.up.rest, carry }; // 皿：余熱の待ち（焼ける量は同じ）
       m.restDone = false;
       m.atRemoval = m.side.slice();
     }
@@ -455,11 +472,12 @@
       const T = TYPES[m.type];
       const f = g.R.fires[s];
       const eff = f * (strongAt(g, s) ? T.strongBoost : 1);
-      const r = T.rate * eff;
+      const r = T.rate * eff * g.up.speed; // 炭：焼ける速さ
       const bottom = 1 - m.up;
       const wasBurnt = m.side[bottom] >= CFG.burnt;
-      m.side[bottom] += r * dt;
-      m.side[m.up] += r * T.through * dt;
+      const ov = (v) => (v > 1 ? g.up.over : 1); // 網：焼けすぎてからの進みが遅い
+      m.side[bottom] += r * dt * ov(m.side[bottom]);
+      m.side[m.up] += r * T.through * dt * ov(m.side[m.up]);
       m.fireHeat += (f - m.fireHeat) * (1 - Math.exp(-dt / CFG.fireTau));
       m.warm += (1 - m.warm) * (1 - Math.exp(-dt / CFG.warmTau));
       m.cookTime += dt;
@@ -488,10 +506,10 @@
         if (m.rest.t >= R) {
           m.restDone = true;
           emit(g, 'rested', { id, plate: p });
-          if (left > 0) m.warm = Math.max(0, m.warm - left / (T.cool * g.R.coolMul));
+          if (left > 0) m.warm = Math.max(0, m.warm - left / (T.cool * g.R.coolMul * g.up.cool));
         }
       } else {
-        m.warm = Math.max(0, m.warm - dt / (T.cool * g.R.coolMul));
+        m.warm = Math.max(0, m.warm - dt / (T.cool * g.R.coolMul * g.up.cool));
       }
       // 出す予定の客がいれば、余熱が終わったところで出す
       if (m.reserved && m.restDone) {
@@ -630,7 +648,7 @@
     return { name: '見習いトング', why: g.score + '点' };
   }
 
-  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, goodRank, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -117,6 +117,21 @@
   .srow .no { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #ff9b2f; color: #3a1a00; font-family: var(--num); font-size: 16px; display: flex; align-items: center; justify-content: center; }
   .srow .tx { flex: 1; min-width: 0; }
   .srow .no.lvi { background: #5a3420; font-size: 18px; }
+  .lvbox { margin: 10px 0 0; padding: 8px 10px; background: #3d2417; border-radius: 12px; font-size: 13px; color: #ffd9b0; }
+  .lvbox:empty { display: none; }
+  .lvbox .lvl { font-family: var(--num); font-size: 18px; color: var(--gold); }
+  .lvbox .bar { height: 6px; margin: 6px 0 2px; background: rgba(255,255,255,.15); border-radius: 3px; overflow: hidden; }
+  .lvbox .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd84d, #ff9b2f); border-radius: 3px; }
+  .lvbox .up { display: block; margin-top: 6px; font-weight: 800; color: #fff; }
+  .lvbox .btn2 { margin: 8px 0 0; background: #ff9b2f; color: #3a1a00; }
+  .tool .no.lvi { background: #5a3420; font-size: 18px; }
+  .tool .pips { flex: none; font-size: 12px; color: var(--gold); letter-spacing: 2px; text-align: center; }
+  .tool .pips i { font-style: normal; color: rgba(255,255,255,.2); }
+  .tool .pips small { display: block; letter-spacing: 0; color: #3a1a00; background: #ffd84d; border-radius: 8px; padding: 2px 6px; margin-top: 3px; font-weight: 800; }
+  .tool.max .pips small { background: #5a3420; color: #ffd9b0; }
+  .tool.cant { cursor: default; }
+  .tool .tx small .nx { color: #fff; font-weight: 700; }
+  .badge { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 8px; background: #e0302a; color: #fff; font-size: 11px; text-decoration: none; }
   .lvhead { margin: 12px 2px 0; font-weight: 800; color: #ffd84d; font-size: 15px; text-align: left; }
   .lvhead small { margin-left: 8px; font-weight: 600; color: #ffd9b0; font-size: 11px; }
   .goalbig { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
@@ -156,7 +171,7 @@
     <div class="stage-next" id="titleStage"></div>
     <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
     <button class="btn" id="startBtn">焼く</button>
-    <button class="tiny" id="stageBtn">ステージをえらぶ・本番へとばす</button>
+    <button class="tiny" id="stageBtn">ステージ・本番をえらぶ</button><button class="tiny" id="toolBtn">道具</button>
     <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから">次の人に渡す</button>
   </div>
  </div>
@@ -168,6 +183,15 @@
     <div class="slist" id="stageList"></div>
     <button class="tiny" id="lvBtn">腕前をえらびなおす（初心者・中級者・上級者）</button>
     <button class="btn2" id="stagesClose">もどる</button>
+  </div>
+</div>
+
+<div class="overlay dim" id="tools" hidden>
+  <div class="card">
+    <h1 class="logo" style="font-size:32px">道具</h1>
+    <div class="lvbox" id="toolInfo"></div>
+    <div class="slist" id="toolList"></div>
+    <button class="btn2" id="toolsClose">もどる</button>
   </div>
 </div>
 
@@ -208,6 +232,7 @@
     <div class="cost" id="rCost"></div>
     <div id="rNew"></div>
     <div class="best" id="rBest" style="margin-top:2px"></div>
+    <div class="lvbox" id="rLevel"></div>
     <div class="lessons" id="rLessons"></div>
     <button class="btn" id="againBtn">もう一回</button>
     <button class="btn2" id="rRetry" hidden>もう一回</button>
