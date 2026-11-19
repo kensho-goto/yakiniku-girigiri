@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#2a1a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="焼肉ギリギリ">
+<meta name="apple-mobile-web-app-title" content="ジュー">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
-<title>焼肉ギリギリ</title>
+<title>ジュー（焼肉）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
@@ -34,8 +34,8 @@
   #title { display: block; padding: 0; }
   #titleFrame { position: absolute; left: 0; top: 0; width: 400px; height: 760px; transform-origin: 0 0; }
   #title .tband { position: absolute; left: 0; right: 0; top: 0; height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
-  #title .logo { font-size: 46px; text-align: center; }
-  #title .logo small { font-size: 16px; margin-bottom: 4px; }
+  #title .logo { font-size: 74px; line-height: 1.05; text-align: center; }
+  #title .logo small { font-size: 18px; letter-spacing: .3em; margin-bottom: 2px; }
   #title .tagline { margin: 14px 0 0; padding: 4px 14px; font-size: 13px; font-weight: 700; letter-spacing: .08em; color: #ffd9b0; background: rgba(20,10,5,.55); border-radius: 999px; }
   #title .card { position: absolute; left: 16px; right: 16px; bottom: 12px; width: auto; max-height: none; padding: 12px 16px 10px; background: rgba(45,27,18,.95); border-radius: 20px; }
   #title .stage-next { margin: 0; font-size: 13px; }
@@ -164,7 +164,7 @@
 <div class="overlay" id="title">
  <div id="titleFrame">
   <div class="tband">
-    <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
+    <h1 class="logo"><small>焼肉</small>ジュー</h1>
     <p class="tagline">焼いて、返して、余熱を読む。</p>
     <div class="best" id="titleBest"></div>
   </div>
@@ -253,7 +253,7 @@
 
 <div class="overlay" id="gate" hidden>
   <div class="card">
-    <h1 class="logo" style="font-size:36px">焼肉ギリギリ</h1>
+    <h1 class="logo" style="font-size:36px">ジュー</h1>
     <p class="sub">合言葉を入れてね</p>
     <input id="gateInput" class="field" type="text" autocomplete="off" autocapitalize="off" placeholder="合言葉">
     <p class="tip" id="gateMsg">&nbsp;</p>
