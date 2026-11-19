@@ -5,6 +5,7 @@
   "description": "焼肉ギリギリ（焼き加減を見極めるスマホ向けクソゲー）",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "start": "python3 -m http.server 8130 --bind ::"
+    "start": "python3 -m http.server 8130 --bind ::",
+    "playtest": "node tools/playtest.js"
   }
 }

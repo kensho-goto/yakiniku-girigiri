@@ -6,6 +6,11 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2a1a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="焼肉ギリギリ">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <title>焼肉ギリギリ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +18,8 @@
 <style>
   :root { --num: 'Dela Gothic One', 'Hiragino Sans', sans-serif; --fire: #ff7a2f; --gold: #ffd84d; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  #safe { position: fixed; top: 0; height: env(safe-area-inset-top); width: 0; visibility: hidden; }
   html, body { margin: 0; height: 100%; background: #1a100c; color: #fff; overflow: hidden; overscroll-behavior: none;
     font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; -webkit-user-select: none; user-select: none; }
   canvas { position: fixed; inset: 0; width: 100vw; height: 100dvh; touch-action: none; display: block; }
@@ -22,7 +29,16 @@
   .card { width: min(360px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; background: #2d1b12; border: 3px solid #5a3420; border-radius: 22px; padding: 22px 18px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
   h1 { font-family: var(--num); font-weight: 400; margin: 0; line-height: 1.05; }
   .logo { font-size: 46px; color: var(--gold); text-shadow: 0 4px 0 #a3261b, 0 0 24px rgba(255,120,40,.6); transform: rotate(-3deg); }
-  .logo small { display: block; font-size: 22px; color: #fff; text-shadow: 0 3px 0 #a3261b; margin-bottom: 4px; }
+  .logo small { display: block; font-family: 'Hiragino Sans', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: .1em; color: #fff; text-shadow: none; margin-bottom: 6px; }
+  #title { flex-direction: column; justify-content: space-between; padding: max(28px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: linear-gradient(rgba(10,5,3,.55), rgba(10,5,3,0) 30%, rgba(10,5,3,0) 55%, rgba(10,5,3,.7)); }
+  #title .logo { font-size: 54px; }
+  #title .card { background: rgba(45,27,18,.94); }
+  .flow { flex-wrap: nowrap; }
+  .tiny { display: block; margin: 10px auto 0; background: none; border: 0; color: #d9b896; font-size: 13px; text-decoration: underline; cursor: pointer; }
+  #rotate { z-index: 20; background: #2a1a14; flex-direction: column; text-align: center; font-size: 20px; font-weight: bold; color: #ffd9b0; }
+  #rotate .ph { width: 54px; height: 90px; border: 5px solid #ffd84d; border-radius: 12px; margin-bottom: 18px; animation: rot 1.6s ease-in-out infinite; }
+  @keyframes rot { 0%, 30% { transform: rotate(90deg); } 60%, 100% { transform: rotate(0deg); } }
+  .cost { font-size: 12px; color: #ff9a8a; min-height: 0; }
   .sub { margin: 14px 0 4px; font-size: 15px; color: #ffd9b0; }
   .flow { display: flex; justify-content: center; gap: 4px; margin: 14px 0 6px; font-size: 13px; color: #fff; flex-wrap: wrap; }
   .flow span { background: #4a2a18; border-radius: 10px; padding: 5px 8px; }
@@ -48,8 +64,8 @@
   .tip { color: #ffb3a0; min-height: 1.2em; font-size: 13px; }
   #gate { z-index: 10; background: #2a1a14; }
   /* ランクの判子 */
-  .rank { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 150px; padding: 8px 18px 10px; border-radius: 18px; border: 4px solid; margin-bottom: 8px; transform: rotate(-6deg); }
-  .rank .rk { font-family: var(--num); font-size: 64px; line-height: 1; }
+  .rank { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 130px; padding: 6px 16px 8px; border-radius: 16px; border: 4px solid; margin-bottom: 4px; transform: rotate(-6deg); }
+  .rank .rk { font-family: var(--num); font-size: 52px; line-height: 1; }
   .rank .rw { font-size: 13px; font-weight: bold; margin-top: 4px; }
   .rank.go { animation: stamp .45s cubic-bezier(.2,1.6,.4,1) .3s both; }
   @keyframes stamp { 0% { transform: scale(3) rotate(-6deg); opacity: 0; } 100% { transform: scale(1) rotate(-6deg); opacity: 1; } }
@@ -63,19 +79,36 @@
   .r-kikaku { color: #fff; border-color: #e0302a; background: #111; }
   .r-kikaku .rk { font-size: 46px; color: #e0302a; }
   .next { font-size: 14px; color: #ffd9b0; margin: 2px 0 6px; }
+  /* 試遊会 */
+  .pt-name { font-size: 16px; padding: 10px; margin-top: 14px; }
+  .pt-name.need { outline: 3px solid #ff5a3a; animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .pt { margin-top: 14px; background: #3d2417; border-radius: 14px; padding: 10px; }
+  .pt-q { font-size: 13px; color: #ffd9b0; margin-bottom: 6px; }
+  .pt-faces { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .pt-faces button { border: 2px solid transparent; background: #2d1b12; color: #ffd9b0; border-radius: 10px; padding: 4px 0 6px; font-size: 11px; cursor: pointer; }
+  .pt-faces button span { display: block; font-size: 26px; }
+  .pt-faces button.sel { border-color: #ffd84d; background: #5a3420; color: #fff; }
+  .pt textarea { width: 100%; margin-top: 8px; border-radius: 10px; border: 0; padding: 8px; font-size: 16px; font-family: inherit; resize: none; }
+  .pt-send { margin-top: 8px; }
+  .pt-send:disabled { opacity: .4; }
+  .pt-thanks { font-size: 15px; font-weight: bold; color: #ffd84d; padding: 6px; }
   .next b { font-family: var(--num); font-weight: 400; color: #ffd84d; font-size: 18px; }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="safe"></div>
 
-<div class="overlay dim" id="title">
+<div class="overlay" id="title">
+  <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
   <div class="card">
-    <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
-    <p class="sub">焼いて、返して、余熱を読む。</p>
-    <div class="flow"><span>網へ置く</span><i>→</i><span>タップで裏返す</span><i>→</i><span>皿へ</span><i>→</i><span>客へ</span></div>
+    <p class="sub" style="margin-top:0">焼いて、返して、余熱を読む。</p>
+    <div class="flow"><span>置く</span><i>→</i><span>タップで返す</span><i>→</i><span>皿へ</span><i>→</i><span>客へ</span></div>
+    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
     <button class="btn" id="startBtn">焼く</button>
     <div class="best" id="titleBest"></div>
+    <button class="tiny" id="ptNextTitle" hidden>次の人に渡す（記録を消して、はじめから）</button>
   </div>
 </div>
 
@@ -93,16 +126,23 @@
   <div class="card">
     <div class="rank" id="rRank"></div>
     <div class="next" id="rNext"></div>
-    <div style="font-size:13px;color:#ffd9b0">今回の売上</div>
-    <div class="score" id="rScore" style="font-size:48px">0</div>
+    <div class="score" id="rScore" style="font-size:44px">0</div>
+    <div class="cost" id="rCost"></div>
     <div id="rNew"></div>
-    <div class="best" id="rBest"></div>
+    <div class="best" id="rBest" style="margin-top:2px"></div>
+    <div class="lessons" id="rLessons"></div>
     <button class="btn" id="againBtn">もう一回</button>
+    <div class="pt" id="ptFeedback" hidden></div>
     <div class="title">今日の称号<b id="rTitle"></b><span id="rWhy"></span></div>
     <div class="stats" id="rStats"></div>
-    <div class="lessons" id="rLessons"></div>
     <button class="btn2" id="rTitleBtn">タイトルへ</button>
+    <button class="btn2" id="ptNextResult" hidden>次の人に渡す</button>
   </div>
+</div>
+
+<div class="overlay" id="rotate" hidden>
+  <div class="ph"></div>
+  スマホを縦にしてね
 </div>
 
 <div class="overlay" id="gate" hidden>
@@ -120,6 +160,7 @@
 <script src="src/draw.js?v=dev"></script>
 <script src="src/sound.js?v=dev"></script>
 <script src="src/gate.js?v=dev"></script>
+<script src="src/playtest.js?v=dev"></script>
 <script src="src/main.js?v=dev"></script>
 </body>
 </html>

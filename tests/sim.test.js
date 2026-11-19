@@ -328,7 +328,7 @@ test('フィーバー：メーターがたまると始まり、点が倍にな�
   const e4 = serveOne('hodo');
   assert.equal(e4.fever, true);
   const comboMult = 1 + CFG.comboStep * 1;
-  assert.equal(e4.pts, Math.round(CFG.points.perfect * comboMult * CFG.feverMult) + CFG.perfectBonus);
+  assert.equal(e4.pts, Math.round(CFG.points.perfect * CFG.anyTypeMult * comboMult * CFG.feverMult) + CFG.perfectBonus);
   serveOne('hodo', [0.1, 0.1]); // ナマ → コンボが切れる
   assert.equal(g.combo, 0);
   assert.equal(g.feverLeft, 0);
@@ -372,4 +372,79 @@ test('ラストオーダー：残り15秒で始まり、客が早く来る', () 
   run(g, 1);
   assert.equal(g.lastOrder, true);
   assert.ok(g.events.some((e) => e.type === 'lastOrder'));
+});
+
+test('置きっぱなしのズル：古い肉と焦げた肉は「にぎわい」に数えない', () => {
+  const g = YG.newGame({ seed: 3 });
+  freezeCustomers(g);
+  const a = YG.place(g, 'harami', 2); // 弱火に置きっぱなし
+  YG.place(g, 'harami', 5);
+  assert.equal(YG.activeCount(g), 2);
+  run(g, CFG.busyFresh + 1);
+  assert.equal(YG.activeCount(g), 0, '置いてから時間がたった肉は数えない');
+  const b = YG.place(g, 'tan', 0);
+  assert.equal(YG.activeCount(g), 1);
+  g.meats[b].side = [0.2, CFG.burnt + 0.01];
+  assert.equal(YG.activeCount(g), 0, '焦げた肉は数えない');
+  // 動かしても新しくはならない
+  YG.moveToSlot(g, a, 1);
+  assert.equal(YG.isActive(g, g.meats[a]), false);
+});
+
+test('肉代：捨てると売上から引かれ、最後に残した肉も引かれる（0より下にはならない）', () => {
+  const g = YG.newGame({ seed: 4 });
+  freezeCustomers(g);
+  const a = YG.place(g, 'tan', 0);
+  g.score = 100;
+  YG.discard(g, a);
+  assert.equal(g.score, 100 - CFG.meatCost);
+  YG.place(g, 'tan', 0); YG.place(g, 'kalbi', 1);
+  g.score = 20;
+  YG.end(g);
+  assert.equal(g.leftover, 2);
+  assert.equal(g.leftoverCost, 20);
+  assert.equal(g.score, 0);
+  assert.equal(g.stats.leftover, 2);
+});
+
+test('「どの肉でも」の客は点がひかえめ', () => {
+  const any = YG.grade({ side: [0.8, 0.8], warm: 1, type: 'tan' }, { type: null, target: 'hodo' });
+  const exact = YG.grade({ side: [0.8, 0.8], warm: 1, type: 'tan' }, { type: 'tan', target: 'hodo' });
+  assert.equal(any.base, exact.base * CFG.anyTypeMult);
+});
+
+test('となりの客と同じ注文にならない', () => {
+  for (let seed = 1; seed < 40; seed++) {
+    const g = YG.newGame({ seed });
+    YG.place(g, 'tan', 0);
+    for (let k = 0; k < 20 * 60; k++) { YG.step(g, DT); g.seats.forEach((st) => { if (st.state === 'wait') st.cust.patience = 999; }); }
+    const w = g.seats.filter((s) => s.state === 'wait').map((s) => (s.cust.order.type || '-') + s.cust.order.target);
+    assert.equal(new Set(w).size, w.length, 'seed ' + seed + ': ' + w.join(','));
+  }
+});
+
+test('予約：網から客へ運ぶと皿へ上がり、余熱が終わったら自動で出る。客が帰ったら取り消し', () => {
+  const g = YG.newGame({ seed: 5 });
+  freezeCustomers(g);
+  const id = YG.place(g, 'tan', 0);
+  run(g, 1);
+  g.meats[id].side = [0.6, 0.6];
+  seatCustomer(g, { type: 'tan', target: 'hodo' }, 1);
+  g.seats[1].cust.n = 77;
+  const r = YG.reserve(g, id, 1);
+  assert.ok(r.ok && r.reserved);
+  assert.equal(g.meats[id].loc, 'plate');
+  assert.equal(g.stats.served, 0, '余熱のあいだは出ない');
+  run(g, YG.TYPES.tan.rest + 0.2);
+  assert.equal(g.stats.served, 1, '余熱が終わったら出る');
+  assert.equal(g.seats[1].state, 'react');
+  // 客が帰ったら取り消し
+  const id2 = YG.place(g, 'tan', 0);
+  seatCustomer(g, { type: 'tan', target: 'hodo' }, 2);
+  g.seats[2].cust.n = 78;
+  YG.reserve(g, id2, 2);
+  g.seats[2].cust.patience = 0.01;
+  run(g, YG.TYPES.tan.rest + 0.2);
+  assert.equal(g.meats[id2].loc, 'plate');
+  assert.equal(g.meats[id2].reserved, null);
 });
