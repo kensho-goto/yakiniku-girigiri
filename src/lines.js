@@ -1,7 +1,7 @@
 // 客の反応。失敗の種類ごとにセリフと顔・演出を決める（ランダムな一言ではなく、起きたことに対応させる）
 (function (root) {
   'use strict';
-  const CHAR_NAMES = ['部長', 'マッチョ', 'おばあちゃん', '美食家', 'ちびっこ', 'ねこ'];
+  const CHAR_NAMES = ['部長', 'マッチョ', 'おばあちゃん', '美食家', 'ちびっこ', 'ねこ', '審査員'];
 
   // key → 共通のセリフ。CHAR[key][char] があればその人らしい言い方を優先する
   const BASE = {
@@ -30,6 +30,14 @@
     leave: ['次の会議があるので', 'ジム行くわ', 'もう寝る時間だよ', '星ゼロ', 'ママに言いつける', 'にゃ（帰る）'],
   };
 
+  // 審査員はいつもこの言い方（格付けの言葉）
+  const VIP = {
+    perfect: ['満点。この店に星をつけます'], great: ['合格。いい仕事です'], good: ['及第点、といったところ'],
+    meh_under: ['減点。火入れが甘い'], meh_over: ['減点。火を入れすぎ'], miss_under: ['注文書を読みましたか？'], miss_over: ['注文書を読みましたか？'],
+    raw: ['この店は、生で出すのですか'], halfraw: ['裏が冷蔵庫でした'], halfraw_burnt: ['表は炭、裏は冷蔵庫。新しい'],
+    burnt: ['特上を…炭に…'], char: ['評価不能。燃料です'], cold: ['冷えた特上は、ただの脂です'], leave: ['審査は終了です'],
+  };
+
   // 結果 → 反応の種類（セリフ・顔・演出・音をそろえる）
   function reactKey(r) {
     if (r.fail === 'leave') return 'leave';
@@ -49,7 +57,7 @@
     const key = reactKey(r);
     const own = CHAR[key] && CHAR[key][char];
     const base = BASE[key] || ['…'];
-    let text = own && n % 2 === 0 ? own : base[n % base.length];
+    let text = char === 6 && VIP[key] ? VIP[key][0] : own && n % 2 === 0 ? own : base[n % base.length];
     // 付け足し：実際に起きたことだけ
     const extra = [];
     if (r.carryOver) extra.push('（余熱で焼けすぎ）');
@@ -58,7 +66,7 @@
     return { key, face: FACE[key] || 'smile', text, extra: extra.join('') };
   }
 
-  const YL = { CHAR_NAMES, BASE, CHAR, reactKey, line, FACE };
+  const YL = { CHAR_NAMES, BASE, CHAR, VIP, reactKey, line, FACE };
   if (typeof module !== 'undefined' && module.exports) module.exports = YL;
   else root.YL = YL;
 })(typeof window !== 'undefined' ? window : globalThis);

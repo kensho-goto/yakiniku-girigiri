@@ -275,3 +275,101 @@ test('称号は実際の出来事から決まる', () => {
   const h = YG.newGame({ seed: 1 });
   assert.equal(YG.title(h).name, 'ただ肉を眺める人');
 });
+
+// ===== ランク・フィーバー・審査員・ラストオーダー =====
+function perfectMeat(g, target, type = 'tan') {
+  const id = g.nextId++;
+  const d = CFG.targets[target];
+  g.meats[id] = { id, type, side: [d, d], up: 0, loc: 'plate', plate: 0, warm: 1, rest: null, restDone: true, atRemoval: null, cookTime: 1, busyInt: 0, flips: 1, detail: 0.5, fireHeat: 0 };
+  g.plates[0] = id;
+  return id;
+}
+
+test('ランク：売上で C〜A5、あと何点も出る', () => {
+  const g = YG.newGame({ seed: 1 });
+  g.score = 100; assert.equal(YG.shopRank(g).key, 'C');
+  assert.equal(YG.shopRank(g).next.need, CFG.ranks[1].min - 100);
+  g.score = CFG.ranks[3].min; assert.equal(YG.shopRank(g).key, 'A4');
+  g.score = 99999; assert.equal(YG.shopRank(g).key, 'A5');
+  assert.equal(YG.shopRank(g).next, null);
+});
+
+test('ランク：失敗なしで神焼き5枚以上なら特選A5、焦がしすぎは規格外', () => {
+  const g = YG.newGame({ seed: 1 });
+  g.score = 99999; g.stats.perfect = 5;
+  assert.equal(YG.shopRank(g).key, 'tokusen');
+  g.stats.cold = 1;
+  assert.equal(YG.shopRank(g).key, 'A5');
+  g.stats.burnt = 4;
+  const r = YG.shopRank(g);
+  assert.equal(r.key, 'kikaku');
+  assert.equal(r.byScore, 'A5');
+});
+
+test('フィーバー：メーターがたまると始まり、点が倍になり、失敗で終わる', () => {
+  const g = YG.newGame({ seed: 1 });
+  YG.place(g, 'tan', 0);
+  freezeCustomers(g);
+  const serveOne = (target, side) => {
+    const id = perfectMeat(g, 'hodo');
+    if (side) g.meats[id].side = side;
+    seatCustomer(g, { type: null, target });
+    return YG.serve(g, id, 0).entry;
+  };
+  serveOne('hodo'); // 神焼き1枚＝2
+  serveOne('kon'); // ちがう：コンボは切れるがメーターは残る
+  assert.equal(g.combo, 0);
+  assert.equal(g.feverLeft, 0);
+  assert.equal(g.feverGauge, 2);
+  const e3 = serveOne('hodo'); // 4 → 始まる
+  assert.ok(g.feverLeft > 0);
+  assert.equal(e3.fever, false, '始まった1枚はまだ倍にならない');
+  assert.equal(g.feverGauge, 0);
+  const e4 = serveOne('hodo');
+  assert.equal(e4.fever, true);
+  const comboMult = 1 + CFG.comboStep * 1;
+  assert.equal(e4.pts, Math.round(CFG.points.perfect * comboMult * CFG.feverMult) + CFG.perfectBonus);
+  serveOne('hodo', [0.1, 0.1]); // ナマ → コンボが切れる
+  assert.equal(g.combo, 0);
+  assert.equal(g.feverLeft, 0);
+});
+
+test('フィーバーは時間がたつと終わり、一時停止中は減らない', () => {
+  const g = YG.newGame({ seed: 1 });
+  YG.place(g, 'tan', 0);
+  g.feverLeft = 3;
+  g.paused = true; run(g, 5); assert.equal(g.feverLeft, 3);
+  g.paused = false; run(g, 3.1); assert.equal(g.feverLeft, 0);
+});
+
+test('審査員：決まった時刻に来て、そのときだけ特上カルビを置ける。出すと点が3倍', () => {
+  const g = YG.newGame({ seed: 5 });
+  assert.equal(YG.place(g, 'toku', 0), null, '審査員が来る前は置けない');
+  YG.place(g, 'tan', 5);
+  // 席を全部空けておく
+  g.seats.forEach((s) => { s.state = 'empty'; s.cust = null; s.nextIn = 1e9; });
+  run(g, CFG.vipTimes[0] + 0.1);
+  const vs = g.seats.findIndex((s) => s.state === 'wait' && s.cust.vip);
+  assert.ok(vs >= 0, '審査員が席にいる');
+  assert.equal(g.seats[vs].cust.order.type, 'toku');
+  assert.equal(g.toku, CFG.vipStock);
+  assert.ok(YG.place(g, 'toku', 0));
+  assert.ok(YG.place(g, 'toku', 1));
+  assert.equal(YG.place(g, 'toku', 2), null, '置ける枚数には上限がある');
+  const id = perfectMeat(g, g.seats[vs].cust.order.target, 'toku');
+  g.plates[0] = id;
+  const e = YG.serve(g, id, vs).entry;
+  assert.equal(e.vip, true);
+  assert.ok(e.pts >= CFG.points.perfect * CFG.vipMult);
+  assert.equal(g.toku, 0);
+});
+
+test('ラストオーダー：残り15秒で始まり、客が早く来る', () => {
+  const g = YG.newGame({ seed: 1 });
+  YG.place(g, 'tan', 0);
+  run(g, CFG.duration - CFG.lastOrder - 0.5);
+  assert.equal(g.lastOrder, false);
+  run(g, 1);
+  assert.equal(g.lastOrder, true);
+  assert.ok(g.events.some((e) => e.type === 'lastOrder'));
+});
