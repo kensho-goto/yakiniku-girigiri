@@ -3,16 +3,20 @@
   'use strict';
   let ac = null, master = null, sizzleGain = null, sizzleSrc = null, bgmGain = null;
   let bgmMode = 'off', nextNote = 0, stepN = 0, bgmTimer = null;
-  let muted = false;
-  try { muted = localStorage.getItem('yaki.mute') === '1'; } catch (e) { /* 保存できない環境 */ }
+  // 音の段階：0＝全部 / 1＝音楽だけ消す / 2＝全部消す
+  let level = 0;
+  try { const v = localStorage.getItem('yaki.sound'); level = v != null ? Number(v) || 0 : localStorage.getItem('yaki.mute') === '1' ? 2 : 0; } catch (e) { /* 保存できない環境 */ }
+  const BGM_VOL = 0.55;
 
   function ensure() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
+    // iPhone：消音スイッチが入っていても鳴るように（Safari 16.4 以降）
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* 古い端末 */ }
     const AC = root.AudioContext || root.webkitAudioContext;
     if (!AC) return false;
     ac = new AC();
     master = ac.createGain();
-    master.gain.value = muted ? 0 : 0.8;
+    master.gain.value = level >= 2 ? 0 : 0.8;
     const comp = ac.createDynamicsCompressor();
     master.connect(comp); comp.connect(ac.destination);
     // ジュージュー（ずっと鳴らして、網の肉の数と火力で大きさを変える）
@@ -25,7 +29,7 @@
     sizzleGain = ac.createGain(); sizzleGain.gain.value = 0;
     sizzleSrc.connect(hp); hp.connect(sizzleGain); sizzleGain.connect(master);
     sizzleSrc.start();
-    bgmGain = ac.createGain(); bgmGain.gain.value = 0.55; bgmGain.connect(master);
+    bgmGain = ac.createGain(); bgmGain.gain.value = level >= 1 ? 0 : BGM_VOL; bgmGain.connect(master);
     bgmTimer = setInterval(schedule, 25);
     return true;
   }
@@ -119,12 +123,18 @@
 
   const S = {
     unlock: ensure,
-    get muted() { return muted; },
-    setMuted(v) {
-      muted = v;
-      try { localStorage.setItem('yaki.mute', v ? '1' : '0'); } catch (e) { /* なくてよい */ }
-      if (master) master.gain.value = v ? 0 : 0.8;
+    get muted() { return level >= 2; },
+    get level() { return level; },
+    // 押すたびに：全部 → 音楽だけ消す → 全部消す → 全部
+    cycle() {
+      level = (level + 1) % 3;
+      try { localStorage.setItem('yaki.sound', String(level)); } catch (e) { /* なくてよい */ }
+      if (master) master.gain.value = level >= 2 ? 0 : 0.8;
+      if (bgmGain) bgmGain.gain.value = level >= 1 ? 0 : BGM_VOL;
+      return level;
     },
+    // ふるえ（Android など。iPhone のブラウザはふるえない）
+    buzz(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* ふるえない端末 */ } },
     // 毎コマ：網の上の量で、ジュージューの大きさを決める
     sizzle(level) {
       if (!sizzleGain) return;
