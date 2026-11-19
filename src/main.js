@@ -242,15 +242,15 @@
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
     $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b>` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? '<b>上級者：本番から</b><br>ランクで勝負。自己ベストをねらう' : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう');
     const sh = shopState();
-    $('toolBtn').innerHTML = `道具 Lv${sh.lv}` + (sh.tickets > 0 ? `<span class="badge">強くできる ${sh.tickets}</span>` : '');
+    $('toolBtn').innerHTML = `道具 Lv${sh.lv}` + (sh.tickets > 0 ? `<span class="badge">+${sh.tickets}</span>` : '');
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
   }
   showBest();
-  // 文字の形（Dela Gothic One）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
+  // 文字の形（Potta One・Yusei Magic）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
   (function waitFont() {
     const sb = $('startBtn');
     sb.disabled = true; sb.textContent = '準備中…';
-    const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Dela Gothic One"', '焼肉0123') : Promise.resolve();
+    const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Potta One"', '焼肉0123') : Promise.resolve();
     Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = '焼く'; });
   })();
   $('startBtn').onclick = () => { if (fromLv() == null && !Object.keys(starsMap()).length) showLevels(); else begin(nextStage()); };
@@ -538,7 +538,7 @@
   function showTip(key, x, y, text) { if (tipsDone[key]) return; tipsDone[key] = 1; tip = { x, y, text, t: 0 }; }
   function checkTips(dt) {
     if (tip) { tip.t += dt; if (tip.t > 3.2) tip = null; }
-    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 44, j.y + 102, '×をタップで捨てる（すてる箱へドラッグでも）'); }
+    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 44, j.y + 102, '×をタップで すてる'); }
     if (!g.stage || tut < 4 || g.state !== 'play' || (starsMap()[g.stage] || 0) >= 1) return;
     const k = g.stage;
     for (let i = 0; i < 6; i++) {
@@ -695,7 +695,7 @@
       const a = Math.min(1, (1 - f.t / f.life) * 2.5);
       const pop = Math.min(1, f.t * 8);
       ctx.save(); ctx.globalAlpha = a; ctx.translate(f.x, f.y - f.t * 26); ctx.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop);
-      ctx.font = `${f.size}px "Dela Gothic One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
+      ctx.font = `${f.size}px "Potta One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(40,10,0,0.9)'; ctx.strokeText(f.text, 0, 0);
       ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
       ctx.restore();
@@ -721,17 +721,15 @@
       ctx.save(); ctx.globalAlpha = a;
       // カウンターの帯に重ねる（客の顔・注文・網を隠さない）
       ctx.translate(200, L.counterY + 8); ctx.scale(0.5 + 0.5 * pop + (pop < 1 ? 0.2 : 0), 0.5 + 0.5 * pop);
-      ctx.fillStyle = 'rgba(30,10,0,0.85)'; YD.roundRect(ctx, -180, -26, 360, b.sub ? 54 : 40, 14); ctx.fill();
-      ctx.font = '24px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-      ctx.lineWidth = 6; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(b.text, 0, 2);
-      ctx.fillStyle = b.color; ctx.fillText(b.text, 0, 2);
-      if (b.sub) { ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(b.sub, 0, 22); }
+      ctx.rotate(-0.035);
+      YD.say(ctx, b.text, 0, 4, 28, b.color, { big: true, lw: 8 });
+      if (b.sub) YD.say(ctx, b.sub, 0, 28, 14, '#fff', { lw: 5 });
       ctx.restore();
     }
   }
   function hitSeat(p, i) { return p && p.y < L.counterY + 8 && Math.abs(p.x - L.seatX[i]) < 66; }
   function bigText(text, x, y, size, color) {
-    ctx.font = `${size}px "Dela Gothic One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
+    ctx.font = `${size}px "Potta One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
     ctx.lineWidth = 8; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(text, x, y);
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   }
@@ -758,9 +756,7 @@
     const pop = 1 + rankPop * 0.25;
     if (ri > 0) { // C のあいだは出さない（はじめから「見切り品」と言わない）
     ctx.save(); ctx.translate(262, 18); ctx.scale(pop, pop);
-    ctx.fillStyle = col[0]; YD.roundRect(ctx, -24, -12, 48, 22, 7); ctx.fill();
-    ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = col[1];
-    ctx.fillText(rk.key, 0, 5);
+    YD.say(ctx, rk.key, 0, 7, 20, col[0] === '#6b6b6b' ? '#ddd' : col[0], { big: true, lw: 5.5 });
     ctx.restore();
     ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 34, 48, 4);
     if (nx) { ctx.fillStyle = col[0]; ctx.fillRect(238, 34, 48 * Math.min(1, (g.score - rk.min) / (nx.min - rk.min)), 4); }
@@ -768,7 +764,7 @@
     }
     if (rankPop > 0) { // ランクアップの知らせ
       ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
-      ctx.font = '14px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
       ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
       ctx.fillStyle = '#ffd84d'; ctx.fillText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
       ctx.restore();
@@ -779,8 +775,7 @@
       const n = YG.starsOf(g);
       const pop = 1 + rankPop * 0.35;
       ctx.save(); ctx.translate(262, 20); ctx.scale(pop, pop);
-      ctx.font = '15px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-      for (let i = 0; i < 3; i++) { ctx.fillStyle = i < n ? '#ffd84d' : 'rgba(255,255,255,0.22)'; ctx.fillText('★', -16 + i * 16, 4); }
+      for (let i = 0; i < 3; i++) YD.say(ctx, '★', -17 + i * 17, 6, 18, i < n ? '#ffd84d' : '#6a5040', { big: true, lw: 4.5 });
       ctx.restore();
       const nd = YG.starNeed(g.stage, g.up.steps);
       const lo = n ? nd[n - 1] : 0, hi = nd[Math.min(2, n)];
@@ -788,7 +783,7 @@
       ctx.fillStyle = '#ffd84d'; ctx.fillRect(238, 32, 48 * (n >= 3 ? 1 : Math.max(0, Math.min(1, (g.stats.ok - lo) / (hi - lo)))), 4);
       if (rankPop > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
-        ctx.font = '14px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+        ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
         const tx = n >= 3 ? '★3!' : '★' + n + '!';
         ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(tx, 262, 66 - (1 - rankPop) * 8);
         ctx.fillStyle = '#ffd84d'; ctx.fillText(tx, 262, 66 - (1 - rankPop) * 8);
@@ -798,63 +793,66 @@
     const tl = Math.ceil(g.timeLeft);
     const hurry = g.state === 'play' && g.timeLeft <= 10;
     const left = Math.max(0, Math.min(1, g.timeLeft / g.R.duration));
-    ctx.font = 'bold 10px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = hurry ? '#ff9a8a' : '#ffd9b0';
-    ctx.fillText('のこり時間', 200, 11);
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'; YD.roundRect(ctx, 160, 37, 80, 5, 2.5); ctx.fill();
-    ctx.fillStyle = left > 0.5 ? '#7ddc6a' : left > 0.22 ? '#ffd84d' : '#ff5a3a'; YD.roundRect(ctx, 160, 37, Math.max(5, 80 * left), 5, 2.5); ctx.fill();
-    ctx.save(); ctx.translate(200, 33);
+    { // 時計：白い盤が減っていく
+      const cx = 172, cy = 22, r = 12;
+      ctx.save(); ctx.translate(cx, cy);
+      if (hurry) ctx.rotate(Math.sin(t * 30) * 0.12);
+      ctx.fillStyle = '#2a1206'; ctx.beginPath(); ctx.arc(0, 0, r + 3, 0, 7); ctx.fill();
+      ctx.fillStyle = '#5a3a28'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+      ctx.fillStyle = left > 0.5 ? '#fff6e6' : left > 0.22 ? '#ffd84d' : '#ff6a4a';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      const a = -Math.PI / 2 + Math.PI * 2 * left; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * (r - 2), Math.sin(a) * (r - 2)); ctx.stroke();
+      ctx.fillStyle = '#2a1206'; ctx.fillRect(-3, -r - 7, 6, 4);
+      ctx.restore();
+    }
+    ctx.save(); ctx.translate(208, 32);
     if (hurry) { const p = 1 + 0.12 * Math.max(0, Math.sin(t * 12)); ctx.scale(p, p); }
-    ctx.font = '24px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-    ctx.lineWidth = 5; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(String(tl), 0, 0);
-    ctx.fillStyle = hurry ? '#ff5a3a' : '#fff'; ctx.fillText(String(tl), 0, 0);
+    YD.say(ctx, String(tl), 0, 0, 26, hurry ? '#ff5a3a' : '#fff', { big: true, lw: 6 });
     ctx.restore();
     ctx.textAlign = 'left';
     let lx;
     if (g.stage) {
       const n = YG.starsOf(g), goal = YG.starNeed(g.stage, g.up.steps)[Math.min(2, n)];
-      ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.fillText(n ? '★' + (n + 1 > 3 ? 3 : n + 1) + 'まで' : '目標', 10, 16);
-      ctx.font = '20px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = n ? '#ffd84d' : '#fff'; const tx = g.stats.ok + '/' + goal; ctx.fillText(tx, 10, 38);
-      const w = ctx.measureText(tx).width; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.fillText('枚', 12 + w, 38);
-      lx = Math.max(80, 10 + w + 26);
+      const tx = g.stats.ok + '/' + goal;
+      YD.say(ctx, tx, 12, 34, 22, n ? '#ffd84d' : '#fff', { big: true, align: 'left', lw: 6 });
+      const w = ctx.measureText(tx).width; YD.say(ctx, '枚', 15 + w, 34, 13, '#ffe9cf', { align: 'left', lw: 4 });
+      lx = Math.max(80, 12 + w + 32);
     } else {
-    ctx.font = '11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.fillText('売上', 10, 16);
-    ctx.font = '20px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d'; ctx.fillText(String(g.score), 10, 38);
-    lx = Math.max(70, 10 + ctx.measureText(String(g.score)).width + 10); // 点の桁が増えても重ならない
-    } // 点の桁が増えても重ならない
+    YD.say(ctx, '¥', 12, 34, 15, '#ffd84d', { big: true, align: 'left', lw: 5 });
+    YD.say(ctx, String(g.score), 26, 34, 22, '#ffd84d', { big: true, align: 'left', lw: 6 });
+    lx = Math.max(70, 26 + ctx.measureText(String(g.score)).width + 10); // 点の桁が増えても重ならない
+    }
     if (g.combo >= 2) {
       ctx.save(); ctx.translate(lx, 20); ctx.scale(1 + comboPop * 0.4, 1 + comboPop * 0.4);
-      ctx.font = '14px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ff7a2f'; ctx.fillText(g.combo + 'コンボ', 0, 0);
+      YD.say(ctx, g.combo + 'コンボ', 0, 0, 15, '#ff9a3f', { big: true, align: 'left', lw: 5 });
       ctx.restore();
     }
     const busy = YG.activeCount(g);
-    if (g.R.busy && busy >= 2 && g.state === 'play') { ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.textAlign = 'left'; ctx.fillText(busy + '枚同時 点×' + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 38); }
+    if (g.R.busy && busy >= 2 && g.state === 'play') YD.say(ctx, busy + '枚同時 ×' + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 40, 12, '#ffe9cf', { align: 'left', lw: 4 });
     // 音・一時停止ボタン
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    YD.roundRect(ctx, 296, 6, 38, 32, 10); ctx.fill();
-    YD.roundRect(ctx, 344, 6, 46, 32, 10); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(360, 13, 5, 18); ctx.fillRect(370, 13, 5, 18);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 4;
+    [360, 371].forEach((px) => { ctx.beginPath(); ctx.rect(px, 12, 6, 20); ctx.stroke(); ctx.fill(); });
     // スピーカー
-    ctx.beginPath(); ctx.moveTo(303, 18); ctx.lineTo(309, 18); ctx.lineTo(316, 12); ctx.lineTo(316, 32); ctx.lineTo(309, 26); ctx.lineTo(303, 26); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(303, 18); ctx.lineTo(309, 18); ctx.lineTo(316, 12); ctx.lineTo(316, 32); ctx.lineTo(309, 26); ctx.lineTo(303, 26); ctx.closePath(); ctx.stroke(); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
     if (YS.level >= 2) { ctx.beginPath(); ctx.moveTo(319, 16); ctx.lineTo(327, 28); ctx.moveTo(327, 16); ctx.lineTo(319, 28); ctx.stroke(); }
     else {
       ctx.beginPath(); ctx.arc(316, 22, 7, -0.8, 0.8); ctx.stroke();
       if (YS.level === 0) { ctx.beginPath(); ctx.arc(316, 22, 12, -0.8, 0.8); ctx.stroke(); }
-      else { ctx.font = 'bold 10px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
+      else { ctx.font = '10px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
     }
     if (g.state === 'ready') {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'; YD.roundRect(ctx, 50, 228, 284, 34, 17); ctx.fill();
-      ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-      ctx.fillText('最初の1枚を置いたら スタート（' + g.R.duration + '秒）', 192, 250);
+      YD.say(ctx, '1枚置いたら スタート！ ' + g.R.duration + '秒', 200, 250, 16, '#fff', { lw: 5 });
       if (g.stage) {
         const st = YG.STAGES[g.stage - 1];
-        ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
+        ctx.font = '15px "Potta One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
         ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
         const tx = 'ステージ' + g.stage + '「' + st.name + '」';
         ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
       } else if (g.shopSteps) { // 道具を強くした人にだけ：本番では効かないと知らせる
-        ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
+        ctx.font = '13px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
         ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
         const tx = '本番は道具なし・腕だけの勝負';
         ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
@@ -958,17 +956,18 @@
   }
   // 黄色い案内の吹き出し（dir：1＝下を指す、-1＝上を指す）
   function bubble(x, y, text, dir, t) {
-    ctx.font = 'bold 15px "Hiragino Sans", sans-serif';
+    ctx.font = '15px "Yusei Magic", "Hiragino Sans", sans-serif';
     const w = ctx.measureText(text).width + 24;
     const bx = Math.max(8, Math.min(W - 8 - w, x - w / 2));
     const bob = Math.sin(t * 5) * 3;
-    ctx.fillStyle = '#ffd84d';
-    YD.roundRect(ctx, bx, y - 16 + bob, w, 32, 16); ctx.fill();
-    ctx.beginPath();
+    ctx.save();
+    YD.blob(ctx, bx + w / 2, y + bob, w + 6, 36, 9, 0);
     const ay = dir > 0 ? y + 16 + bob : y - 16 + bob;
-    ctx.moveTo(x - 8, ay); ctx.lineTo(x, ay + 10 * dir); ctx.lineTo(x + 8, ay); ctx.fill();
-    ctx.fillStyle = '#3a1a00'; ctx.textAlign = 'center';
+    ctx.moveTo(x - 8, ay); ctx.lineTo(x, ay + 12 * dir); ctx.lineTo(x + 8, ay);
+    ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#2a1206'; ctx.stroke(); ctx.fillStyle = '#ffd84d'; ctx.fill();
+    ctx.fillStyle = '#2a1206'; ctx.textAlign = 'center';
     ctx.fillText(text, bx + w / 2, y + 5 + bob);
+    ctx.restore();
   }
 
   // タイトルの後ろ：網の上で肉が焼けていく

@@ -237,7 +237,7 @@
       ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
       for (let i = -12; i <= 12; i += 6) { ctx.beginPath(); ctx.ellipse(0, 20 + i, 16 * Math.sqrt(1 - (i / 22) ** 2), 1, 0, 0, 7); ctx.stroke(); }
       ctx.fillStyle = '#222'; ctx.fillRect(-8, -3, 16, 4); ctx.fillRect(-8, 40, 16, 4);
-      ctx.fillStyle = '#fff3d6'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('肉', 0, 25);
+      ctx.fillStyle = '#fff3d6'; ctx.font = '13px "Yusei Magic", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('肉', 0, 25);
       ctx.restore();
     }
     // カウンター
@@ -337,14 +337,9 @@
     for (let c = 0; c < 3; c++) {
       const fn = YG.fireName(c, fires);
       const x = L.slotX[c], y = G.y + 14;
-      ctx.fillStyle = 'rgba(20,10,6,0.82)';
-      roundRect(ctx, x - 34, y - 12, 68, 22, 11); ctx.fill();
-      ctx.strokeStyle = FIRE_COLOR[fn]; ctx.lineWidth = 1.5; ctx.stroke();
-      for (let i = 0; i < FIRE_FLAMES[fn]; i++) drawFlame(ctx, x - 22 + i * 9, y + 6, 4, 11, 1);
-      ctx.fillStyle = FIRE_COLOR[fn];
-      ctx.font = 'bold 13px "Hiragino Sans", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(FIRE_LABEL[fn], x - 22 + FIRE_FLAMES[fn] * 9 + 2, y + 4);
+      const nf = FIRE_FLAMES[fn];
+      for (let i = 0; i < nf; i++) drawFlame(ctx, x - 24 + i * 10, y + 8, 5, 14, 1);
+      say(ctx, FIRE_LABEL[fn], x - 24 + nf * 10 + 1, y + 6, 14, FIRE_COLOR[fn], { align: 'left', lw: 4 });
     }
   }
   function drawFlame(ctx, x, y, w, h, a) {
@@ -407,13 +402,10 @@
       pill(ctx, x, y + r - 2, text, bg, fg, !good ? 'bad' : null);
     }
   }
+  // 焼け具合のひとこと：箱に入れず、ふち文字（おいしい＝明るい黄、生＝桃、だめ＝灰、冷めた＝水色）
   function pill(ctx, x, y, text, bg, fg, mark) {
-    ctx.font = 'bold 12px "Hiragino Sans", sans-serif';
-    const w = ctx.measureText(text).width + 14 + (mark ? 12 : 0);
-    ctx.fillStyle = bg;
-    roundRect(ctx, x - w / 2, y - 9, w, 19, 9.5); ctx.fill();
-    ctx.fillStyle = fg; ctx.textAlign = 'center';
-    ctx.fillText((mark ? '× ' : '') + text, x, y + 5);
+    const col = bg === '#a9d6ff' ? '#bfe4ff' : bg === '#ffb3c0' ? '#ff9db0' : bg === '#555' ? '#d0c8c0' : '#ffe58a';
+    say(ctx, (mark ? '× ' : '') + text, x, y + 5, 14, col, { lw: 4.5 });
   }
   // 焦げ・冷めた肉の「×」（タップで捨てる）
   function drawJunkBadge(ctx, x, y, t) {
@@ -436,16 +428,13 @@
     ctx.fillStyle = '#9aa3aa'; ctx.fillRect(-29, -28, 58, 8);
     ctx.fillStyle = '#222';
     for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(-14 + i * 9, -27, 6, 4, i, 0, 7); ctx.fill(); }
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(ctx, -26, 0, 52, 20, 6); ctx.fill();
-    ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('すてる', 0, 15);
+    ctx.save(); ctx.rotate(-0.06); say(ctx, 'すてる', 0, 14, 14, '#f4f1ea', { lw: 4, stroke: '#3c4247' }); ctx.restore();
     if (o && o.hint) {
       ctx.strokeStyle = `rgba(255,225,77,${0.5 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
       roundRect(ctx, -34, -36, 68, 90, 10); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
   }
-  const TRAY_NOTE = { tan: 'うすい・早い', kalbi: '脂で燃える', harami: 'あつい・余熱大', toku: '審査員用' };
   const UNLOCK_AT = { kalbi: 2, harami: 5 }; // ステージで使えるようになる肉
   const trayMeats = {};
   function trayMeat(type) {
@@ -478,12 +467,12 @@
       ctx.beginPath(); ctx.ellipse(x + 18, y - 16, 18, 8, -0.5, 0, 7); ctx.fill();
       drawMeat(ctx, trayMeat(type), x, y - 6, { scale: 0.66, t, selected: held === type });
       ctx.restore();
-      ctx.fillStyle = '#2a1608'; ctx.textAlign = 'center';
-      ctx.font = `bold ${special ? 13 : 15}px "Hiragino Sans", sans-serif`;
-      ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 32);
-      ctx.font = 'bold 10.5px "Hiragino Sans", sans-serif';
-      ctx.fillStyle = '#2a1608';
-      ctx.fillText(special && open ? 'あと' + toku + '枚' : locked ? (UNLOCK_AT[type] ? 'ステージ' + UNLOCK_AT[type] + 'から' : 'まだ使えない') : TRAY_NOTE[type], x, y + 46);
+      // 木のトレーに焼印で書いたような名前
+      ctx.fillStyle = 'rgba(58,28,8,0.92)'; ctx.textAlign = 'center';
+      ctx.font = `${special ? 14 : 17}px "Yusei Magic", "Hiragino Sans", sans-serif`;
+      ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 36);
+      if (special && open) say(ctx, '×' + toku, x + 30, y - 22, 16, '#ffe58a', { big: true, lw: 4 });
+      else if (locked && UNLOCK_AT[type]) say(ctx, 'ステージ' + UNLOCK_AT[type], x, y - 26, 12, '#f4e3c8', { lw: 3.5 });
       if (!open) { // 鍵
         ctx.fillStyle = '#3a2410';
         roundRect(ctx, x - 10, y - 12, 20, 16, 3); ctx.fill();
@@ -498,18 +487,19 @@
   function drawCustomer(ctx, seat, i, t, react) {
     if (seat.state === 'closed') { // このステージでは使わない席：のれんに「準備中」
       const x = L.seatX[i];
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      roundRect(ctx, x - 34, L.counterY - 70, 68, 70, 8); ctx.fill();
-      ctx.fillStyle = 'rgba(255,217,176,0.3)'; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('準備中', x, L.counterY - 30);
+      // 使わない席：いすを机の上にさかさに上げてある
+      ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#4a2c18'; ctx.strokeStyle = '#1e0f06'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x, L.counterY - 40, 24, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
+      [-16, 16].forEach((d) => { ctx.beginPath(); ctx.moveTo(x + d * 0.8, L.counterY - 38); ctx.lineTo(x + d, L.counterY - 4); ctx.stroke(); });
+      ctx.restore();
       return;
     }
     if (seat.state === 'empty') { // 空いた席：いすの背もたれと「空席」
       const x = L.seatX[i];
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      roundRect(ctx, x - 30, L.counterY - 44, 60, 44, 10); ctx.fill();
-      ctx.fillStyle = 'rgba(255,217,176,0.35)'; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('空席', x, L.counterY - 18);
+      // 空いた席：いすの背もたれがのぞく
+      ctx.fillStyle = 'rgba(74,44,24,0.75)'; ctx.strokeStyle = 'rgba(20,10,4,0.8)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - 26, L.counterY); ctx.lineTo(x - 24, L.counterY - 30); ctx.quadraticCurveTo(x, L.counterY - 46, x + 24, L.counterY - 30); ctx.lineTo(x + 26, L.counterY); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,220,180,0.12)'; ctx.beginPath(); ctx.moveTo(x - 16, L.counterY - 30); ctx.quadraticCurveTo(x, L.counterY - 40, x + 16, L.counterY - 30); ctx.stroke();
       return;
     }
     const c = seat.cust || {};
@@ -552,7 +542,7 @@
       ctx.beginPath(); ctx.moveTo(x - 30, y + 28); ctx.lineTo(x + 34, L.counterY + 4); ctx.stroke();
       ctx.restore();
       ctx.save(); ctx.translate(x + 2, y + 44); ctx.rotate(0.6);
-      ctx.fillStyle = '#5a3a00'; ctx.font = 'bold 8px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('審査員', 0, 3);
+      ctx.fillStyle = '#5a3a00'; ctx.font = '8px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('審査員', 0, 3);
       ctx.restore();
     }
     // 頭
@@ -585,7 +575,7 @@
       ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(-5, -3, 5, 4, 0.3, 0, 7); ctx.fill();
       ctx.fillStyle = '#f4b6c2'; ctx.beginPath(); ctx.ellipse(0, 6, 8, 5, 0, 0, 7); ctx.fill();
       ctx.fillStyle = '#222'; ctx.fillRect(-3, 4, 2, 3); ctx.fillRect(2, 4, 2, 3);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('モー', 14, -6);
+      ctx.fillStyle = '#fff'; ctx.font = '11px "Yusei Magic", sans-serif'; ctx.textAlign = 'left'; ctx.fillText('モー', 14, -6);
       ctx.restore();
     }
     ctx.restore();
@@ -681,29 +671,26 @@
     ctx.save();
     if (k < 0.4) ctx.translate(Math.sin(t * (k < 0.15 ? 40 : 22)) * (k < 0.15 ? 2.5 : 1.2), 0); // 待ちきれない：ふるえる
     if (opts && opts.target) { ctx.translate(x, y); ctx.scale(1.06, 1.06); ctx.translate(-x, -y); }
-    ctx.fillStyle = c.vip ? '#fff3c4' : '#fffaf0';
-    roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.fill();
-    if (c.vip) { ctx.strokeStyle = `rgba(212,175,55,${0.7 + 0.3 * Math.sin(t * 8)})`; ctx.lineWidth = 4; roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.stroke();
-      ctx.fillStyle = '#d4af37'; roundRect(ctx, x + 22, y + h / 2 + 4, 54, 18, 9); ctx.fill();
-      ctx.fillStyle = '#3a2400'; ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('点数×' + YG.CFG.vipMult, x + 49, y + h / 2 + 17); }
-    ctx.beginPath(); ctx.moveTo(x - 8, y + h / 2 - 1); ctx.lineTo(x, y + h / 2 + 10); ctx.lineTo(x + 8, y + h / 2 - 1); ctx.fill();
-    if (opts && opts.target) { ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 4; roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.stroke(); }
+    blob(ctx, x, y, w, h, i + 1, 3);
+    ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = opts && opts.target ? '#ffcf1f' : c.vip ? `rgba(196,150,30,${0.75 + 0.25 * Math.sin(t * 8)})` : '#2a1206'; ctx.stroke();
+    ctx.fillStyle = c.vip ? '#fff0b8' : '#fffaf0'; ctx.fill();
+    if (opts && opts.target) { ctx.lineWidth = 1.5; ctx.strokeStyle = '#2a1206'; blob(ctx, x, y, w + 7, h + 7, i + 1, 0); ctx.stroke(); }
+    if (c.vip) say(ctx, '点×' + YG.CFG.vipMult, x + 44, y + h / 2 + 18, 15, '#ffd84d', { big: true, lw: 4.5 });
     // 焼き色の見本（どの肉でも同じ目安として、カルビで見せる）
     drawMeat(ctx, sampleMeat(c.order.target), x - 30, y - 6, { scale: 0.36 });
     ctx.fillStyle = '#2a1a10'; ctx.textAlign = 'center';
-    ctx.font = 'bold 16px "Hiragino Sans", sans-serif';
+    ctx.font = '16px "Yusei Magic", "Hiragino Sans", sans-serif';
     ctx.fillText(YG.TARGET_NAME[c.order.target], x + 20, y - 4);
-    ctx.font = 'bold 12px "Hiragino Sans", sans-serif';
+    ctx.font = '12px "Yusei Magic", "Hiragino Sans", sans-serif';
     ctx.fillStyle = c.order.type ? '#a3261b' : '#6a5a4a';
     ctx.fillText(c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : 'どの肉でも', x + 20, y + 14);
     if (!c.order.type && !(opts && opts.noPts)) { // どの肉でも：点がひかえめ（ステージは枚数なので出さない）
-      ctx.fillStyle = '#8a7a6a'; roundRect(ctx, x + 22, y + h / 2 + 4, 54, 18, 9); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillText('点×' + YG.CFG.anyTypeMult, x + 49, y + h / 2 + 17);
+      say(ctx, '点×' + YG.CFG.anyTypeMult, x + 44, y + h / 2 + 16, 13, '#e0d6ca', { lw: 4 });
     }
     if (k < 0.15) { // もう帰る：頭の左上に赤い「！」
       const ex = x - 44, ey = L.headY - 34;
       ctx.fillStyle = '#e0302a'; ctx.beginPath(); ctx.arc(ex, ey, 11, 0, 7); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', ex, ey + 6);
+      ctx.fillStyle = '#fff'; ctx.font = '16px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', ex, ey + 6);
     }
     // 待ちの残り（長さと色）
     const bw = w - 20;
@@ -718,27 +705,26 @@
     const x = L.seatX[i];
     const rt = YG.CFG.reactTime - seat.timer;
     const pop = Math.min(1, rt * 6);
-    ctx.font = 'bold 13px "Hiragino Sans", sans-serif';
+    ctx.font = '13px "Yusei Magic", "Hiragino Sans", sans-serif';
     const lines0 = wrap(ctx, info.text + (info.extra || ''), 120).slice(0, 3);
     const h0 = 14 + (info.head ? 24 : 0) + lines0.length * 17;
     const y = Math.max(82, 54 + h0 / 2); // 上の欄にかからない
     ctx.save(); ctx.translate(x, y); ctx.scale(pop, pop);
     const good = ['perfect', 'great', 'good'].includes(info.key);
     ctx.fillStyle = info.key === 'perfect' ? '#fff3a0' : good ? '#ffffff' : info.key === 'leave' ? '#ffd0d0' : '#f0f0f0';
-    ctx.font = 'bold 13px "Hiragino Sans", sans-serif';
+    ctx.font = '13px "Yusei Magic", "Hiragino Sans", sans-serif';
     const lines = lines0;
     const head = info.head ? 24 : 0;
     const h = h0;
-    roundRect(ctx, -68, -h / 2, 136, h, 12); ctx.fill();
-    const edge = info.key === 'perfect' ? '#ffb000' : good ? '#8bc34a' : '#e0302a';
-    ctx.strokeStyle = edge; ctx.lineWidth = 3; ctx.stroke();
+    blob(ctx, 0, 0, 140, h + 6, i + 4, 0); ctx.fill();
+    ctx.strokeStyle = '#2a1206'; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.stroke();
     ctx.textAlign = 'center';
     if (head) { // 評価のひとこと（大きく）
-      ctx.font = '19px "Dela Gothic One", "Hiragino Sans", sans-serif';
+      ctx.font = '19px "Potta One", "Hiragino Sans", sans-serif';
       ctx.fillStyle = info.key === 'perfect' ? '#d97a00' : good ? '#3d7a1a' : '#c0282a';
       ctx.fillText(info.head, 0, -h / 2 + 25);
     }
-    ctx.font = 'bold 13px "Hiragino Sans", sans-serif';
+    ctx.font = '13px "Yusei Magic", "Hiragino Sans", sans-serif';
     ctx.fillStyle = '#2a1a10';
     lines.forEach((ln, j) => ctx.fillText(ln, 0, -h / 2 + head + 21 + j * 17));
     ctx.restore();
@@ -751,11 +737,36 @@
     return out.slice(0, 4);
   }
 
+  // 箱に入れず、ふちの太い文字で書く（Penguin Diner・にゃんこ大戦争の見せ方）
+  function say(ctx, text, x, y, size, fill, o) {
+    o = o || {};
+    ctx.font = size + 'px ' + (o.big ? '"Potta One", "Hiragino Sans", sans-serif' : '"Yusei Magic", "Hiragino Sans", sans-serif');
+    ctx.textAlign = o.align || 'center'; ctx.lineJoin = 'round';
+    ctx.lineWidth = o.lw != null ? o.lw : Math.max(3, size * 0.32); ctx.strokeStyle = o.stroke || '#2a1206';
+    if (ctx.lineWidth > 0) ctx.strokeText(text, x, y);
+    ctx.fillStyle = fill; ctx.fillText(text, x, y);
+  }
+  // 手で描いたような吹き出し（少しゆがんだ丸み・太い墨の線・しっぽ）。seed で形が席ごとに変わる
+  function blob(ctx, x, y, w, h, seed, tail) {
+    const n = 28, rx = w / 2, ry = h / 2;
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const c = Math.cos(a), sn = Math.sin(a);
+      // 角の丸い四角と楕円のあいだ（文字が入る）＋ほんの少しのゆらぎ
+      const k = 1 + 0.025 * Math.sin(a * 3 + seed * 1.7) + 0.015 * Math.sin(a * 5 + seed);
+      const px = x + Math.sign(c) * Math.pow(Math.abs(c), 0.55) * rx * k;
+      const py = y + Math.sign(sn) * Math.pow(Math.abs(sn), 0.55) * ry * k;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (tail) { ctx.moveTo(x - 9, y + ry - 3); ctx.quadraticCurveTo(x - 2, y + ry + 8, x - 6 + tail, y + ry + 13); ctx.quadraticCurveTo(x + 6, y + ry + 4, x + 9, y + ry - 3); }
+  }
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, };
+  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, say, blob, };
 })(window);
