@@ -103,9 +103,15 @@
   .srow { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; padding: 9px 10px; background: #3d2417; border: 0; border-radius: 12px; color: #fff; font: inherit; text-align: left; cursor: pointer; }
   .srow .no { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #ff9b2f; color: #3a1a00; font-family: var(--num); font-size: 16px; display: flex; align-items: center; justify-content: center; }
   .srow .tx { flex: 1; min-width: 0; }
+  .srow .no.lvi { background: #5a3420; font-size: 18px; }
+  .lvhead { margin: 12px 2px 0; font-weight: 800; color: #ffd84d; font-size: 15px; text-align: left; }
+  .lvhead small { margin-left: 8px; font-weight: 600; color: #ffd9b0; font-size: 11px; }
+  .goalbig { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .goalbig b { color: #ffd84d; font-size: 22px; }
   .srow .tx b { display: block; font-size: 15px; }
   .srow .tx small { display: block; font-size: 11.5px; color: #d9b896; }
-  .srow .st { flex: none; font-size: 15px; }
+  .srow .st { flex: none; font-size: 15px; text-align: center; }
+  .srow .goaln { display: block; font-size: 11px; color: #ffd9b0; }
   .srow.lock { opacity: .45; cursor: default; }
   .srow.lock .no { background: #6b4a35; color: #d9b896; }
   .srow.cur { outline: 3px solid #ffd84d; }
@@ -143,7 +149,17 @@
   <div class="card">
     <h1 class="logo" style="font-size:32px">ステージ</h1>
     <div class="slist" id="stageList"></div>
+    <button class="tiny" id="lvBtn">腕前をえらびなおす（初心者・中級者・上級者）</button>
     <button class="btn2" id="stagesClose">もどる</button>
+  </div>
+</div>
+
+<div class="overlay dim" id="levels" hidden>
+  <div class="card">
+    <h1 class="logo" style="font-size:32px">腕前は？</h1>
+    <p class="sub">いつでも「ステージをえらぶ」から変えられます</p>
+    <div class="slist" id="levelList"></div>
+    <button class="btn2" id="levelsClose">もどる</button>
   </div>
 </div>
 

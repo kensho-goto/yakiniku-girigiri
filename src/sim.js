@@ -81,35 +81,36 @@
     fires: CFG.fires.slice(), arriveGap: CFG.arriveGap.slice(), fever: true, busy: true, vip: true, lastOrder: true, meatCost: true, coolMul: 1,
     patience: [CFG.patienceStart, CFG.patienceEnd], firstArrivals: CFG.firstArrivals.slice(),
   };
+  // stars：★1（＝目標）・★2・★3 に要る「うまく焼けた枚数」
   const STAGES = [
     { name: '屋台', learn: '置く → 返す → 皿 → 客',
       intro: ['トレーのタンを、網へドラッグ', '肉汁が浮いたら、タップで裏返す', '両面が焼けたら、皿へ。そして客へ'],
       rule: { arriveGap: [4, 6], duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
-      stars: [60, 170, 300] },
+      stars: [2, 4, 5] },
     { name: '裏を読む', learn: '肉汁と煙で、見えない裏を読む',
       intro: ['上から見えるのは、上の面だけ', '肉汁が浮いたら、下が焼けた合図', '煙が出たら、下が焦げはじめた合図'],
       rule: { arriveGap: [4, 6], duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
-      stars: [80, 290, 700] },
+      stars: [2, 5, 8] },
     { name: '好みを聞く', learn: 'うす焼き・ほどよく・こんがり',
       intro: ['客ごとに、好みの焼き加減がちがう', '吹き出しの焼き色の見本に合わせる', '少し焼きすぎた肉は、こんがり派へ'],
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
-      stars: [100, 220, 420] },
-    { name: '火を使い分ける', learn: '中火・強火・弱火',
+      stars: [2, 3, 5] },
+    { name: '火を使い分ける', learn: '左から 強火・中火・弱火',
       intro: ['列ごとに、火の強さがちがう（上の札）', '強火は速いが、焦げやすい', '焦げそうなら、弱火へドラッグで逃がす'],
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
-      stars: [90, 210, 420] },
+      stars: [2, 3, 5] },
     { name: '余熱を読む', learn: '上げたあとも焼ける',
       intro: ['皿へ上げても、しばらく焼ける（余熱）', '厚いハラミ・強火から上げた肉ほど、よく進む', 'ねらいより少し手前で上げる'],
       rule: { arriveGap: [3, 5], duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
-      stars: [100, 380, 620] },
+      stars: [2, 5, 7] },
     { name: '満席', learn: 'たくさん焼く・フィーバー・肉代',
       intro: ['同時にたくさん焼くほど、点が増える', 'うまい以上を続けると、フィーバー（点が2倍）', '捨てた肉・残した肉は、肉代を引かれる'],
       rule: { arriveGap: [2.5, 4.5], vip: false },
-      stars: [120, 600, 1250] },
+      stars: [3, 6, 9] },
     { name: '審査員', learn: '特上カルビで3倍',
       intro: ['審査員が来たら、特上カルビが焼ける', '好みどおりに出すと、点が3倍', '残り15秒は、ラストオーダー'],
       rule: {},
-      stars: [150, 750, 1600] },
+      stars: [3, 7, 10] },
   ];
   // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
   function ruleOf(stage) {
@@ -119,8 +120,10 @@
   function starsOf(g) {
     const st = STAGES[g.stage - 1];
     if (!st) return 0;
-    return st.stars.filter((v) => g.score >= v).length;
+    return st.stars.filter((v) => g.stats.ok >= v).length;
   }
+  // うまく焼けた枚数：頼んだ肉を「ふつう」以上で出した枚数（ステージの目標と★はこれで決まる）
+  function goodRank(r) { return !r.fail && !r.wrongType && (r.rank === 'perfect' || r.rank === 'great' || r.rank === 'good'); }
   const CHARS = 6; // ふつうの客の種類の数（見た目とセリフは lines.js / draw.js）
   const VIP_CHAR = 6; // 審査員
 
@@ -160,7 +163,7 @@
       combo: 0,
       maxCombo: 0,
       log: [], // 出した肉の記録（ふりかえり用）
-      stats: { served: 0, perfect: 0, great: 0, good: 0, meh: 0, miss: 0, raw: 0, halfraw: 0, burnt: 0, char: 0, cold: 0, luke: 0, leave: 0, wrong: 0, discard: 0, carryOver: 0, maxBusy: 0, placed: 0, burnedOnStrong: 0 },
+      stats: { served: 0, ok: 0, perfect: 0, great: 0, good: 0, meh: 0, miss: 0, raw: 0, halfraw: 0, burnt: 0, char: 0, cold: 0, luke: 0, leave: 0, wrong: 0, discard: 0, carryOver: 0, maxBusy: 0, placed: 0, burnedOnStrong: 0 },
       events: [], // 画面・音へ知らせる出来事（main.js が取り出す）
       tutorial: !!opts.tutorial,
       custCount: 0,
@@ -323,6 +326,7 @@
     const st = g.stats;
     st.served++;
     if (RANKS.includes(r.rank)) st[r.rank]++;
+    if (goodRank(r)) st.ok++;
     if (r.fail) st[r.fail]++;
     if (r.luke) st.luke++;
     if (r.wrongType) st.wrong++;
@@ -626,7 +630,7 @@
     return { name: '見習いトング', why: g.score + '点' };
   }
 
-  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, goodRank, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);

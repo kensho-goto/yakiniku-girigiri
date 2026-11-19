@@ -689,7 +689,7 @@
     ctx.font = 'bold 12px "Hiragino Sans", sans-serif';
     ctx.fillStyle = c.order.type ? '#a3261b' : '#6a5a4a';
     ctx.fillText(c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : 'どの肉でも', x + 20, y + 14);
-    if (!c.order.type) { // どの肉でも：点がひかえめ
+    if (!c.order.type && !(opts && opts.noPts)) { // どの肉でも：点がひかえめ（ステージは枚数なので出さない）
       ctx.fillStyle = '#8a7a6a'; roundRect(ctx, x + 22, y + h / 2 + 4, 54, 18, 9); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillText('点×' + YG.CFG.anyTypeMult, x + 49, y + h / 2 + 17);
     }
