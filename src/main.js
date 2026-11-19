@@ -102,7 +102,8 @@
     $('introNo').textContent = 'ステージ ' + k + ' / ' + NS;
     $('introName').textContent = st.name;
     $('introList').innerHTML = st.intro.map((t) => `<li>${t}</li>`).join('');
-    $('introGoal').innerHTML = `<div class="goalbig">目標：うまく焼いて <b>${st.stars[0]}枚</b> 出せ！</div>★2 <b>${st.stars[1]}</b>枚　★3 <b>${st.stars[2]}</b>枚　（${YG.ruleOf(k).duration}秒）<br><small>頼まれた肉を「ふつう」以上で出したら1枚</small>`;
+    const nd = YG.starNeed(k, toolSteps()), plus = nd[2] - st.stars[2];
+    $('introGoal').innerHTML = `<div class="goalbig">目標：うまく焼いて <b>${nd[0]}枚</b> 出せ！</div>★2 <b>${nd[1]}</b>枚　★3 <b>${nd[2]}</b>枚${plus ? `<small>（道具ぶん +${plus}）</small>` : ''}　（${YG.ruleOf(k).duration}秒）<br><small>頼まれた肉を「ふつう」以上で出したら1枚</small>`;
     ['title', 'stages', 'result', 'pause'].forEach((id) => { $(id).hidden = true; });
     $('intro').hidden = false;
   }
@@ -123,7 +124,7 @@
       html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '🔒'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st"><span class="stars">${starHtml(sm[k] || 0)}</span><small class="goaln">目標${st.stars[0]}枚</small></span></button>`;
     }
     const total = Object.values(sm).reduce((a, b) => a + b, 0);
-    html += `<button class="srow free" data-k="0"><span class="no">本番</span><span class="tx"><b>本番（自由に焼く）</b><small>${cur ? '全部できる人は、とばしてここから' : 'ランクで勝負。自己ベストをねらう'}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
+    html += `<button class="srow free" data-k="0"><span class="no">本番</span><span class="tx"><b>本番（自由に焼く）</b><small>${cur ? '全部できる人は、とばしてここから' : '道具なし・腕だけでランク勝負'}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
     html += `<div class="goal" style="text-align:center">★ ${total} / ${NS * 3}</div>`;
     $('stageList').innerHTML = html;
     $('stageList').querySelectorAll('.srow').forEach((b) => { b.onclick = () => { if (!b.disabled) begin(Number(b.dataset.k)); }; });
@@ -174,6 +175,7 @@
     const used = YG.TOOL_KEYS.reduce((a, k) => a + (tools[k] || 0), 0);
     return { exp, lv, tools, tickets: Math.max(0, lv - 1 - used), next: YG.LV_EXP[lv] };
   }
+  function toolSteps() { return YG.toolUp(store.get('yaki.tools', {})).steps; }
   function lvHtml(sh, gained) {
     const lo = YG.LV_EXP[sh.lv - 1], hi = sh.next;
     const pct = hi ? Math.round((sh.exp - lo) / (hi - lo) * 100) : 100;
@@ -195,7 +197,8 @@
   function showTools(fromResult) {
     toolsFromResult = !!fromResult;
     const sh = shopState();
-    $('toolInfo').innerHTML = lvHtml(sh) + (sh.tickets > 0 ? `<span class="up">強くできる道具：あと${sh.tickets}つ（タップで選ぶ）</span>` : '<span class="up" style="font-weight:600;color:#ffd9b0">うまく焼くと店のレベルが上がり、道具を強くできる</span>');
+    $('toolInfo').innerHTML = lvHtml(sh) + (sh.tickets > 0 ? `<span class="up">強くできる道具：あと${sh.tickets}つ（タップで選ぶ）</span>` : '<span class="up" style="font-weight:600;color:#ffd9b0">うまく焼くと店のレベルが上がり、道具を強くできる</span>') +
+      '<small class="lvrule">道具が効くのはステージだけ（本番は腕だけの勝負）。<br>強い店ほどお客が多く来て、★3の目標も上がる</small>';
     $('toolList').innerHTML = YG.TOOL_KEYS.map((k) => {
       const T = YG.TOOLS[k], n = sh.tools[k] || 0, max = n >= 3;
       const can = !max && sh.tickets > 0;
@@ -305,8 +308,8 @@
     stamp.innerHTML = `<span class="rk">${starHtml(n)}</span><span class="rw">ステージ${k}「${st.name}」</span>`;
     stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
     const opened = n >= 1 && before === 0 && k < NS;
-    const need = st.stars[n];
-    $('rNext').innerHTML = opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `目標まで あと <b>${need - got}</b>枚（目標 ${st.stars[0]}枚）` : n < 3 ? `★${n + 1}まで あと <b>${need - got}</b>枚` : '★3 達成！';
+    const nd = YG.starNeed(k, g.up.steps), need = nd[n];
+    $('rNext').innerHTML = opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `目標まで あと <b>${need - got}</b>枚（目標 ${nd[0]}枚）` : n < 3 ? `★${n + 1}まで あと <b>${need - got}</b>枚` : '★3 達成！';
     if (n >= 1 && before === 0 && k === NS) $('rNext').innerHTML = '全ステージ クリア！ 本番が待っている';
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(n * 1.5); } }, 350);
     $('rNew').innerHTML = n > before && before > 0 ? '<span class="new">★更新！</span>' : got > bestBefore && bestBefore > 0 ? '<span class="new">ステージの自己ベスト！</span>' : '';
@@ -567,7 +570,7 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
-      if (prevState === 'ready' && g.state === 'play') banner('スタート！', g.stage ? g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！' : 'のこり' + g.R.duration + '秒で 売上をかせげ', '#ffd84d', 1.4);
+      if (prevState === 'ready' && g.state === 'play') banner('スタート！', g.stage ? g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！' : '道具なし・腕だけで ' + g.R.duration + '秒', '#ffd84d', 1.4);
       if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner('のこり10秒！', '', '#ff5a3a', 1.2); }
       prevState = g.state;
       checkTips(dt);
@@ -654,7 +657,7 @@
     YD.drawTrash(ctx, t, { hint: !!carryMeat || junk.length > 0 });
     // 網
     const hint = carrying ? g.grill.map((id) => !id) : null;
-    YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0, fires: g.R.fires });
+    YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0, fires: g.R.fires, grade: g.shopSteps });
     for (let i = 0; i < 6; i++) {
       const id = g.grill[i]; if (!id) continue;
       if (dragging && ptr.drag.id === id) continue;
@@ -773,14 +776,14 @@
     }
     // ステージ：★3つと、次の★までの近さ
     function renderStars() {
-      const st = YG.STAGES[g.stage - 1];
       const n = YG.starsOf(g);
       const pop = 1 + rankPop * 0.35;
       ctx.save(); ctx.translate(262, 20); ctx.scale(pop, pop);
       ctx.font = '15px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
       for (let i = 0; i < 3; i++) { ctx.fillStyle = i < n ? '#ffd84d' : 'rgba(255,255,255,0.22)'; ctx.fillText('★', -16 + i * 16, 4); }
       ctx.restore();
-      const lo = n ? st.stars[n - 1] : 0, hi = st.stars[Math.min(2, n)];
+      const nd = YG.starNeed(g.stage, g.up.steps);
+      const lo = n ? nd[n - 1] : 0, hi = nd[Math.min(2, n)];
       ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 32, 48, 4);
       ctx.fillStyle = '#ffd84d'; ctx.fillRect(238, 32, 48 * (n >= 3 ? 1 : Math.max(0, Math.min(1, (g.stats.ok - lo) / (hi - lo)))), 4);
       if (rankPop > 0) {
@@ -808,7 +811,7 @@
     ctx.textAlign = 'left';
     let lx;
     if (g.stage) {
-      const st = YG.STAGES[g.stage - 1], n = YG.starsOf(g), goal = st.stars[Math.min(2, n)];
+      const n = YG.starsOf(g), goal = YG.starNeed(g.stage, g.up.steps)[Math.min(2, n)];
       ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.fillText(n ? '★' + (n + 1 > 3 ? 3 : n + 1) + 'まで' : '目標', 10, 16);
       ctx.font = '20px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = n ? '#ffd84d' : '#fff'; const tx = g.stats.ok + '/' + goal; ctx.fillText(tx, 10, 38);
       const w = ctx.measureText(tx).width; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.fillText('枚', 12 + w, 38);
@@ -849,6 +852,11 @@
         ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
         ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
         const tx = 'ステージ' + g.stage + '「' + st.name + '」';
+        ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
+      } else if (g.shopSteps) { // 道具を強くした人にだけ：本番では効かないと知らせる
+        ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
+        ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
+        const tx = '本番は道具なし・腕だけの勝負';
         ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
       }
     }
@@ -974,7 +982,7 @@
   function renderIdle(t) {
     for (let p = 0; p < 3; p++) YD.drawPlate(ctx, p, null, t, {}); // 皿とすてる箱も描いて、ゲーム中と同じ店にする
     YD.drawTrash(ctx, t, {});
-    YD.drawGrill(ctx, t);
+    YD.drawGrill(ctx, t, { grade: toolSteps() });
     // 画面の速さに関係なく進める。焼けたら湯気とともに消して、少し待って次を置く（見本だけ）
     const dt = demoLast == null ? 0 : Math.min(0.1, t - demoLast); demoLast = t;
     demoAcc += dt;

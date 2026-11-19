@@ -266,7 +266,14 @@
       roundRect(ctx, G.x - 10, G.y - 10, G.w + 20, G.h + 20, 26); ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = '#2b2b2b';
+    // 枠の色＝店の格（道具を強くした段の数。本番でも見た目だけ出る）：ふつう→銅→銀→金
+    const gr = (opts && opts.grade) || 0;
+    const rim = gr >= 12 ? ['#f3d36b', '#a8801c'] : gr >= 8 ? ['#d9dde2', '#7d838a'] : gr >= 4 ? ['#c98a5a', '#7a4524'] : null;
+    if (rim) {
+      const rg2 = ctx.createLinearGradient(0, G.y - 6, 0, G.y + G.h + 6);
+      rg2.addColorStop(0, rim[0]); rg2.addColorStop(1, rim[1]);
+      ctx.fillStyle = rg2;
+    } else ctx.fillStyle = '#2b2b2b';
     roundRect(ctx, G.x - 6, G.y - 6, G.w + 12, G.h + 12, 22); ctx.fill();
     ctx.fillStyle = '#121010';
     roundRect(ctx, G.x, G.y, G.w, G.h, 16); ctx.fill();
