@@ -44,6 +44,7 @@
 
   // ===== はじまり・おわり =====
   function newRun() {
+    if (g && mode === 'play' && window.YP) YP.quit(g, 'retry');
     tut = store.get('yaki.tut', 0) >= 4 ? 4 : 0;
     g = YG.newGame({ tutorial: tut < 4 });
     held = null; ptr = null; fx = []; react.fill(null); shake = 0; endAt = 0; lastTick = -1;
@@ -52,6 +53,7 @@
     mode = 'play';
     ['title', 'pause', 'result'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
+    if (window.YP) YP.start(g);
   }
   function pause(on) {
     if (!g || mode !== 'play' || g.state === 'over') return;
@@ -62,6 +64,7 @@
     last = null; // もどったときに、離れていた時間をまとめて足さない
   }
   function toTitle() {
+    if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
     mode = 'title'; g = null;
     ['pause', 'result'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
@@ -117,6 +120,8 @@
     $('rLessons').innerHTML = ls.length
       ? '<div style="background:none;padding:0;color:#ffd9b0">ふりかえり</div>' + ls.map((l) => `<div><b>${l.text} ×${l.n}</b><small>${l.tip}</small></div>`).join('')
       : (st.served ? '<div>失敗なし！ 次はもっと置いてにぎやかに</div>' : '');
+    $('ptFeedback').hidden = true;
+    if (window.YP) YP.end(g, rk, tt);
     $('result').hidden = false;
   }
 

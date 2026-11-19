@@ -63,6 +63,18 @@
   .r-kikaku { color: #fff; border-color: #e0302a; background: #111; }
   .r-kikaku .rk { font-size: 46px; color: #e0302a; }
   .next { font-size: 14px; color: #ffd9b0; margin: 2px 0 6px; }
+  /* 試遊会 */
+  .pt-name { font-size: 16px; padding: 10px; margin-top: 14px; }
+  .pt { margin-top: 14px; background: #3d2417; border-radius: 14px; padding: 10px; }
+  .pt-q { font-size: 13px; color: #ffd9b0; margin-bottom: 6px; }
+  .pt-faces { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .pt-faces button { border: 2px solid transparent; background: #2d1b12; color: #ffd9b0; border-radius: 10px; padding: 4px 0 6px; font-size: 11px; cursor: pointer; }
+  .pt-faces button span { display: block; font-size: 26px; }
+  .pt-faces button.sel { border-color: #ffd84d; background: #5a3420; color: #fff; }
+  .pt textarea { width: 100%; margin-top: 8px; border-radius: 10px; border: 0; padding: 8px; font-size: 16px; font-family: inherit; resize: none; }
+  .pt-send { margin-top: 8px; }
+  .pt-send:disabled { opacity: .4; }
+  .pt-thanks { font-size: 15px; font-weight: bold; color: #ffd84d; padding: 6px; }
   .next b { font-family: var(--num); font-weight: 400; color: #ffd84d; font-size: 18px; }
 </style>
 </head>
@@ -74,6 +86,7 @@
     <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
     <p class="sub">焼いて、返して、余熱を読む。</p>
     <div class="flow"><span>網へ置く</span><i>→</i><span>タップで裏返す</span><i>→</i><span>皿へ</span><i>→</i><span>客へ</span></div>
+    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
     <button class="btn" id="startBtn">焼く</button>
     <div class="best" id="titleBest"></div>
   </div>
@@ -98,6 +111,7 @@
     <div id="rNew"></div>
     <div class="best" id="rBest"></div>
     <button class="btn" id="againBtn">もう一回</button>
+    <div class="pt" id="ptFeedback" hidden></div>
     <div class="title">今日の称号<b id="rTitle"></b><span id="rWhy"></span></div>
     <div class="stats" id="rStats"></div>
     <div class="lessons" id="rLessons"></div>
@@ -120,6 +134,7 @@
 <script src="src/draw.js?v=dev"></script>
 <script src="src/sound.js?v=dev"></script>
 <script src="src/gate.js?v=dev"></script>
+<script src="src/playtest.js?v=dev"></script>
 <script src="src/main.js?v=dev"></script>
 </body>
 </html>
