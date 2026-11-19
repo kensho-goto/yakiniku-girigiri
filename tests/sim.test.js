@@ -510,3 +510,31 @@ test('うまく焼けた枚数：頼んだ肉を「ふつう」以上で出し�
   assert.ok(!YG.goodRank({ rank: 'fail', fail: 'burnt' }));
   assert.ok(!YG.goodRank({ rank: 'great', wrongType: true }));
 });
+test('店のレベル：うまく焼けた枚数の合計で上がる', () => {
+  assert.equal(YG.levelOf(0), 1);
+  assert.equal(YG.levelOf(4), 1);
+  assert.equal(YG.levelOf(5), 2);
+  assert.equal(YG.levelOf(999), YG.LV_EXP.length);
+  assert.equal(YG.LV_EXP.length - 1, YG.TOOL_KEYS.length * 3, '最高レベルで全部の道具が3段になる');
+});
+test('炭：強くすると速く焼ける', () => {
+  const side = (tools) => { const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g); const id = YG.place(g, 'kalbi', 1); run(g, 2); return g.meats[id].side[1]; };
+  assert.ok(side({ sumi: 3 }) > side({}) * 1.25);
+});
+test('網：焼けすぎてからの進みが遅い（ちょうどまでは同じ）', () => {
+  const side = (tools, sec) => { const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g); const id = YG.place(g, 'kalbi', 1); run(g, sec); return g.meats[id].side[1]; };
+  assert.ok(Math.abs(side({ ami: 3 }, 2) - side({}, 2)) < 1e-9);
+  assert.ok(side({ ami: 3 }, 12) < side({}, 12) - 0.2);
+});
+test('皿：余熱の待ちが短い・焼ける量は同じ', () => {
+  const carry = (tools) => {
+    const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g);
+    const id = YG.place(g, 'harami', 1); run(g, 4);
+    const m = g.meats[id]; YG.toPlate(g, id, 0); const at = m.side[1];
+    run(g, 0.5); const done = m.restDone; run(g, 4);
+    return { amt: m.side[1] - at, done };
+  };
+  const a = carry({}), b = carry({ sara: 3 });
+  assert.ok(!a.done && b.done, '職人の皿は0.5秒で余熱が終わる');
+  assert.ok(Math.abs(a.amt - b.amt) < 0.01);
+});
