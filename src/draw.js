@@ -12,7 +12,7 @@
     trash: { x: 350, y: 272, w: 64, h: 70 },
     grill: { x: 12, y: 320, w: 376, h: 292 },
     slotX: [76, 200, 324], slotY: [398, 540], slotW: 118, slotH: 136,
-    trayY: 680, trayX: [76, 200, 324],
+    trayY: 680, trayX: [57, 152, 247, 342],
   };
   L.slot = (i) => ({ x: L.slotX[i % 3], y: L.slotY[Math.floor(i / 3)] });
 
@@ -30,15 +30,16 @@
   const RAMP = {
     tan: [[0, [236, 150, 160]], [0.35, [232, 186, 178]], [0.6, [214, 186, 160]], [0.85, [196, 150, 104]], [1.1, [160, 104, 56]], [1.35, [84, 52, 30]], [1.7, [28, 22, 20]]],
     kalbi: [[0, [206, 52, 66]], [0.35, [196, 96, 86]], [0.6, [178, 104, 72]], [0.85, [150, 82, 44]], [1.1, [112, 58, 26]], [1.35, [60, 36, 20]], [1.7, [22, 18, 16]]],
+    toku: [[0, [232, 120, 130]], [0.35, [214, 140, 120]], [0.6, [196, 128, 86]], [0.85, [168, 98, 52]], [1.1, [124, 66, 30]], [1.35, [62, 38, 20]], [1.7, [22, 18, 16]]],
     harami: [[0, [160, 26, 44]], [0.35, [162, 70, 70]], [0.6, [148, 82, 62]], [0.85, [124, 66, 40]], [1.1, [94, 50, 26]], [1.35, [54, 32, 20]], [1.7, [20, 18, 16]]],
   };
   const FAT = [[0, [252, 236, 232]], [0.5, [250, 226, 190]], [0.9, [236, 192, 112]], [1.3, [130, 80, 36]], [1.7, [30, 24, 20]]];
   function meatColor(type, d) { return ramp(RAMP[type], d); }
 
   // ===== 肉の形（肉ごとに少しずつちがう。id から作って覚えておく） =====
-  const shapes = new Map();
+  const shapes = new WeakMap(); // 肉そのものに結びつける（見本の肉と id が重なっても混ざらない）
   function shapeOf(m) {
-    let s = shapes.get(m.id);
+    let s = shapes.get(m);
     if (s) return s;
     const rnd = YG.mulberry32(Math.floor(m.detail * 1e9) + 7);
     const pts = [];
@@ -47,7 +48,7 @@
       const a = (i / N) * Math.PI * 2;
       let x, y;
       if (m.type === 'tan') { x = Math.cos(a) * 40; y = Math.sin(a) * 30; }
-      else if (m.type === 'kalbi') {
+      else if (m.type === 'kalbi' || m.type === 'toku') {
         // 角の丸い長方形
         const c = Math.cos(a), si = Math.sin(a);
         const k = 1 / Math.max(Math.abs(c) / 44, Math.abs(si) / 27);
@@ -64,6 +65,11 @@
       pts.push([x + (rnd() - 0.5) * j, y + (rnd() - 0.5) * j]);
     }
     const fat = [];
+    if (m.type === 'toku') {
+      // 霜降り：細かいサシが網の目のように入る
+      for (let i = 0; i < 9; i++) fat.push({ x: -42 + rnd() * 50, y: -24 + rnd() * 44, len: 14 + rnd() * 30, w: 1.5 + rnd() * 2.5, bend: (rnd() - 0.5) * 16 });
+      for (let i = 0; i < 6; i++) fat.push({ x: -40 + rnd() * 60, y: -20 + rnd() * 40, len: 6 + rnd() * 10, w: 2 + rnd() * 2, bend: (rnd() - 0.5) * 6 });
+    }
     if (m.type === 'kalbi') {
       for (let i = 0; i < 4; i++) fat.push({ x: -38 + i * 22 + rnd() * 8, y: -20 + rnd() * 10, len: 20 + rnd() * 26, w: 3 + rnd() * 4, bend: (rnd() - 0.5) * 14 });
       fat.push({ x: -44, y: 18 + rnd() * 4, len: 88, w: 6 + rnd() * 3, bend: 2, edge: true });
@@ -73,7 +79,7 @@
     const beads = [];
     for (let i = 0; i < 7; i++) beads.push({ x: (rnd() - 0.5) * 56, y: (rnd() - 0.5) * 30, r: 1.6 + rnd() * 1.8, ph: rnd() * 6 });
     s = { pts, fat, spots, beads, tilt: (rnd() - 0.5) * 0.25 };
-    shapes.set(m.id, s);
+    shapes.set(m, s);
     return s;
   }
   function pathPts(ctx, pts, dx, dy) {
@@ -125,7 +131,7 @@
     pathPts(ctx, sh.pts, 0, 0);
     ctx.clip();
     // 肉ごとの模様
-    if (m.type === 'kalbi') {
+    if (m.type === 'kalbi' || m.type === 'toku') {
       const fc = ramp(FAT, top);
       ctx.lineCap = 'round';
       for (const f of sh.fat) {
@@ -247,6 +253,14 @@
   function drawGrill(ctx, t, opts) {
     const G = L.grill;
     // 七輪の枠
+    const fever = opts && opts.fever;
+    if (fever) { // フィーバー：七輪のまわりが金色に燃える
+      ctx.save();
+      ctx.shadowColor = '#ffb000'; ctx.shadowBlur = 30 + 10 * Math.sin(t * 10);
+      ctx.fillStyle = '#ffcc33';
+      roundRect(ctx, G.x - 10, G.y - 10, G.w + 20, G.h + 20, 26); ctx.fill();
+      ctx.restore();
+    }
     ctx.fillStyle = '#2b2b2b';
     roundRect(ctx, G.x - 6, G.y - 6, G.w + 12, G.h + 12, 22); ctx.fill();
     ctx.fillStyle = '#121010';
@@ -254,7 +268,7 @@
     // 炭（列ごとに火力が見える）
     for (let c = 0; c < 3; c++) {
       const fn = YG.fireName(c);
-      const k = fn === 'strong' ? 1 : fn === 'mid' ? 0.62 : 0.3;
+      const k = (fn === 'strong' ? 1 : fn === 'mid' ? 0.62 : 0.3) * (fever ? 1.25 : 1);
       const cx = L.slotX[c];
       for (let r = 0; r < 2; r++) {
         const cy = L.slotY[r];
@@ -398,36 +412,53 @@
     }
     ctx.restore();
   }
-  const TRAY_NOTE = { tan: 'うすい・早い', kalbi: '脂・強火で燃える', harami: 'あつい・余熱大' };
+  const TRAY_NOTE = { tan: 'うすい・早い', kalbi: '脂で燃える', harami: 'あつい・余熱大', toku: '審査員用' };
   const trayMeats = {};
   function trayMeat(type) {
-    if (!trayMeats[type]) trayMeats[type] = { id: -1 - YG.TYPE_KEYS.indexOf(type), type, side: [0, 0], up: 0, detail: 0.31 + YG.TYPE_KEYS.indexOf(type) * 0.17, warm: 0 };
+    const k = YG.TRAY_KEYS.indexOf(type);
+    if (!trayMeats[type]) trayMeats[type] = { id: -1 - k, type, side: [0, 0], up: 0, detail: 0.31 + k * 0.17, warm: 0 };
     return trayMeats[type];
   }
-  function drawTray(ctx, t, held) {
+  // toku＝いま置ける特上カルビの枚数（0なら鍵がかかって見える）
+  function drawTray(ctx, t, held, toku) {
     const y = L.trayY;
     ctx.fillStyle = '#c99b62';
     roundRect(ctx, 10, y - 52, 380, 106, 14); ctx.fill();
     ctx.fillStyle = '#b4854f';
     roundRect(ctx, 18, y - 44, 364, 90, 10); ctx.fill();
-    for (let i = 0; i < 3; i++) {
-      const type = YG.TYPE_KEYS[i];
+    for (let i = 0; i < 4; i++) {
+      const type = YG.TRAY_KEYS[i];
       const x = L.trayX[i];
-      // 葉っぱ（盛りつけ）
+      const special = type === 'toku';
+      const open = !special || toku > 0;
+      if (special) {
+        // 特上の台：金色。審査員がいるときだけ光る
+        ctx.fillStyle = open ? `rgba(255,216,77,${0.55 + 0.25 * Math.sin(t * 6)})` : 'rgba(60,35,15,0.5)';
+        roundRect(ctx, x - 44, y - 46, 88, 94, 10); ctx.fill();
+      }
+      ctx.save();
+      if (!open) ctx.globalAlpha = 0.35;
       ctx.fillStyle = '#4f8a3a';
-      ctx.beginPath(); ctx.ellipse(x + 20, y - 16, 22, 9, -0.5, 0, 7); ctx.fill();
-      drawMeat(ctx, trayMeat(type), x, y - 6, { scale: 0.78, t, selected: held === type });
+      ctx.beginPath(); ctx.ellipse(x + 18, y - 16, 18, 8, -0.5, 0, 7); ctx.fill();
+      drawMeat(ctx, trayMeat(type), x, y - 6, { scale: 0.66, t, selected: held === type });
+      ctx.restore();
       ctx.fillStyle = '#2a1608'; ctx.textAlign = 'center';
-      ctx.font = 'bold 16px "Hiragino Sans", sans-serif';
-      ctx.fillText(YG.TYPES[type].name, x, y + 34);
-      ctx.font = '11px "Hiragino Sans", sans-serif';
+      ctx.font = `bold ${special ? 13 : 15}px "Hiragino Sans", sans-serif`;
+      ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 32);
+      ctx.font = '10.5px "Hiragino Sans", sans-serif';
       ctx.fillStyle = '#4a2a10';
-      ctx.fillText(TRAY_NOTE[type], x, y + 49);
+      ctx.fillText(special && open ? 'あと' + toku + '枚' : TRAY_NOTE[type], x, y + 46);
+      if (!open) { // 鍵
+        ctx.fillStyle = '#3a2410';
+        roundRect(ctx, x - 10, y - 12, 20, 16, 3); ctx.fill();
+        ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y - 12, 6, Math.PI, 0); ctx.stroke();
+      }
     }
   }
 
   // ===== 客 =====
-  const SKIN = ['#f2c9a0', '#c98a5a', '#f5d5b8', '#efc49a', '#f7d2b0', '#f0a24a'];
+  const SKIN = ['#f2c9a0', '#c98a5a', '#f5d5b8', '#efc49a', '#f7d2b0', '#f0a24a', '#e8c09a'];
   function drawCustomer(ctx, seat, i, t, react) {
     if (seat.state === 'empty') return;
     const c = seat.cust || {};
@@ -456,7 +487,7 @@
       ctx.restore();
     }
     // 体
-    const bodyCol = ['#4a5260', '#e8e8e8', '#8a5aa6', '#1e1e24', '#f2c230', '#f0a24a'][ch];
+    const bodyCol = ['#4a5260', '#e8e8e8', '#8a5aa6', '#1e1e24', '#f2c230', '#f0a24a', '#15151c'][ch];
     ctx.fillStyle = bodyCol;
     const sw = ch === 1 ? 50 : ch === 4 ? 32 : 40;
     ctx.beginPath(); ctx.moveTo(x - sw, L.counterY + 4); ctx.quadraticCurveTo(x - sw, y + 30, x, y + 28); ctx.quadraticCurveTo(x + sw, y + 30, x + sw, L.counterY + 4); ctx.fill();
@@ -464,6 +495,15 @@
     if (ch === 0) { ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(x - 5, y + 30); ctx.lineTo(x + 5, y + 30); ctx.lineTo(x + 3, L.counterY); ctx.lineTo(x - 3, L.counterY); ctx.fill(); }
     if (ch === 3) { ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(x, y + 32); ctx.lineTo(x - 12, y + 26); ctx.lineTo(x - 12, y + 38); ctx.closePath(); ctx.moveTo(x, y + 32); ctx.lineTo(x + 12, y + 26); ctx.lineTo(x + 12, y + 38); ctx.fill(); }
     if (ch === 5) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y + 34, 18, 0, Math.PI); ctx.fill(); }
+    if (ch === 6) { // 審査員：金のたすき
+      ctx.save(); ctx.beginPath(); ctx.rect(x - 60, y + 26, 120, L.counterY - y - 22); ctx.clip();
+      ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 12;
+      ctx.beginPath(); ctx.moveTo(x - 30, y + 28); ctx.lineTo(x + 34, L.counterY + 4); ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.translate(x + 2, y + 44); ctx.rotate(0.6);
+      ctx.fillStyle = '#5a3a00'; ctx.font = 'bold 8px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('審査員', 0, 3);
+      ctx.restore();
+    }
     // 頭
     const hr = ch === 4 ? 25 : 29;
     let skin = SKIN[ch];
@@ -518,6 +558,12 @@
     } else if (ch === 3) { // 美食家：ベレー帽
       ctx.fillStyle = '#7b1e3c'; ctx.beginPath(); ctx.ellipse(x + 4, y - r + 4, r + 4, 10, -0.15, 0, 7); ctx.fill();
       ctx.fillRect(x + 2, y - r - 10, 3, 6);
+    } else if (ch === 6) { // 審査員：七三分けと金の王冠
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(x, y - 4, r + 1, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+      ctx.fillStyle = '#ffd84d';
+      ctx.beginPath(); ctx.moveTo(x - 16, y - r + 2); ctx.lineTo(x - 16, y - r - 14); ctx.lineTo(x - 8, y - r - 6); ctx.lineTo(x, y - r - 18); ctx.lineTo(x + 8, y - r - 6); ctx.lineTo(x + 16, y - r - 14); ctx.lineTo(x + 16, y - r + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e0302a'; ctx.beginPath(); ctx.arc(x, y - r - 6, 3, 0, 7); ctx.fill();
     } else if (ch === 4) { // ちびっこ：ぼうし
       ctx.fillStyle = '#2e86de'; ctx.beginPath(); ctx.arc(x, y - 6, r + 1, Math.PI, 0); ctx.fill();
       ctx.fillRect(x - r - 12, y - 9, 20, 5);
@@ -583,8 +629,11 @@
     const k = c.patience / c.maxPatience;
     ctx.save();
     if (opts && opts.target) { ctx.translate(x, y); ctx.scale(1.06, 1.06); ctx.translate(-x, -y); }
-    ctx.fillStyle = '#fffaf0';
+    ctx.fillStyle = c.vip ? '#fff3c4' : '#fffaf0';
     roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.fill();
+    if (c.vip) { ctx.strokeStyle = `rgba(212,175,55,${0.7 + 0.3 * Math.sin(t * 8)})`; ctx.lineWidth = 4; roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.stroke();
+      ctx.fillStyle = '#d4af37'; roundRect(ctx, x + 22, y + h / 2 + 4, 54, 18, 9); ctx.fill();
+      ctx.fillStyle = '#3a2400'; ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('点数×' + YG.CFG.vipMult, x + 49, y + h / 2 + 17); }
     ctx.beginPath(); ctx.moveTo(x - 8, y + h / 2 - 1); ctx.lineTo(x, y + h / 2 + 10); ctx.lineTo(x + 8, y + h / 2 - 1); ctx.fill();
     if (opts && opts.target) { ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 4; roundRect(ctx, x - w / 2, y - h / 2, w, h, 14); ctx.stroke(); }
     // 焼き色の見本（どの肉でも同じ目安として、カルビで見せる）
@@ -594,7 +643,7 @@
     ctx.fillText(YG.TARGET_NAME[c.order.target], x + 20, y - 4);
     ctx.font = 'bold 12px "Hiragino Sans", sans-serif';
     ctx.fillStyle = c.order.type ? '#a3261b' : '#6a5a4a';
-    ctx.fillText(c.order.type ? YG.TYPES[c.order.type].name + 'で' : '肉はなんでも', x + 20, y + 14);
+    ctx.fillText(c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : '肉はなんでも', x + 20, y + 14);
     // 待ちの残り（長さと色）
     const bw = w - 20;
     ctx.fillStyle = '#e6dccb'; roundRect(ctx, x - bw / 2, y + h / 2 - 12, bw, 6, 3); ctx.fill();
@@ -633,5 +682,5 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawPlate, drawTrash, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, forget: (id) => shapes.delete(id) };
+  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawPlate, drawTrash, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, };
 })(window);

@@ -18,6 +18,8 @@
   let endAt = 0;
   let tut = 0; // はじめての説明の段階（0〜4、4で終わり）
   let lastTick = -1;
+  let banners = []; // 画面のまん中に出す大きな知らせ（操作は止めない）
+  let rankIdx = 0, rankPop = 0;
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -45,6 +47,7 @@
     tut = store.get('yaki.tut', 0) >= 4 ? 4 : 0;
     g = YG.newGame({ tutorial: tut < 4 });
     held = null; ptr = null; fx = []; react.fill(null); shake = 0; endAt = 0; lastTick = -1;
+    banners = []; rankIdx = 0; rankPop = 0;
     acc = 0; last = null;
     mode = 'play';
     ['title', 'pause', 'result'].forEach((id) => { $(id).hidden = true; });
@@ -67,7 +70,8 @@
   }
   function showBest() {
     const b = store.get('yaki.best', 0);
-    $('titleBest').innerHTML = b ? `自己ベスト <b>${b}</b>` : '';
+    const br = store.get('yaki.bestRank', null);
+    $('titleBest').innerHTML = b ? `自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '';
   }
   showBest();
   $('startBtn').onclick = newRun;
@@ -87,13 +91,26 @@
     if (isNew) store.set('yaki.best', g.score);
     store.set('yaki.plays', store.get('yaki.plays', 0) + 1);
     $('rScore').textContent = g.score;
+    // ランクの判子
+    const rk = YG.shopRank(g);
+    const order = ['kikaku', 'C', 'B', 'A3', 'A4', 'A5', 'tokusen'];
+    const bestRank = store.get('yaki.bestRank', null);
+    const rkName = rk.key === 'kikaku' ? null : rk.name;
+    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(bestRank === '特選A5' ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
+    const stamp = $('rRank');
+    stamp.className = 'rank r-' + rk.key;
+    stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? '（売上だけなら ' + rk.byScore + '）' : rk.word}</span>`;
+    stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
+    const nx = rk.key !== 'tokusen' && rk.next;
+    $('rNext').innerHTML = rk.key === 'kikaku' ? '焦がしすぎて格付けできません' : nx ? `${nx.key}まで あと <b>${nx.need}</b>点` : rk.key === 'A5' ? '失敗なし＋神焼き5枚で <b>特選A5</b>' : '最高ランク！';
+    setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(Math.max(0, rk.index)); } }, 350);
     $('rNew').innerHTML = isNew && g.score > 0 ? '<span class="new">自己ベスト更新！</span>' : '';
     $('rBest').innerHTML = `自己ベスト <b>${Math.max(best, g.score)}</b>`;
     const tt = YG.title(g);
     $('rTitle').textContent = tt.name;
     $('rWhy').textContent = '（' + tt.why + '）';
     const st = g.stats;
-    const cells = [['神焼き', st.perfect], ['うまい', st.great], ['ふつう', st.good], ['最大コンボ', g.maxCombo],
+    const cells = [['神焼き', st.perfect], ['うまい', st.great], ['フィーバー', g.fevers], ['審査員○', (st.vipWin || 0) + '/' + (st.vipCame || 0)],
       ['ナマ', st.raw + st.halfraw], ['コゲ・炭', st.burnt + st.char], ['冷め', st.cold], ['帰った', st.leave]];
     $('rStats').innerHTML = cells.map(([k, v]) => `<div><b>${v}</b>${k}</div>`).join('');
     const ls = YG.lessons(g).slice(0, 3);
@@ -123,7 +140,7 @@
       for (let i = 0; i < 3; i++) if (Math.abs(x - L.seatX[i]) < 66) return { kind: 'seat', i };
     }
     if (y > L.trayY - 56 && y < L.trayY + 60) {
-      for (let i = 0; i < 3; i++) if (Math.abs(x - L.trayX[i]) < 62) return { kind: 'tray', type: YG.TYPE_KEYS[i] };
+      for (let i = 0; i < 4; i++) if (Math.abs(x - L.trayX[i]) < 47) return { kind: 'tray', type: YG.TRAY_KEYS[i] };
     }
     return null;
   }
@@ -151,7 +168,7 @@
     ptr.x = p.x; ptr.y = p.y;
     if (!ptr.drag && Math.hypot(p.x - ptr.sx, p.y - ptr.sy) > 12) {
       const h = ptr.h;
-      if (h && h.kind === 'tray') ptr.drag = { kind: 'new', type: h.type };
+      if (h && h.kind === 'tray' && (h.type !== 'toku' || g.toku > 0)) ptr.drag = { kind: 'new', type: h.type };
       else if (h && (h.kind === 'slot' || h.kind === 'plate') && h.id && g.meats[h.id] && g.meats[h.id].loc !== 'gone') ptr.drag = { kind: 'meat', id: h.id };
       if (ptr.drag) { clearTimeout(ptr.long); held = null; }
     }
@@ -173,6 +190,7 @@
     if (!h) { held = null; return; }
     if (h.kind === 'pause') { pause(true); return; }
     if (h.kind === 'sound') { YS.setMuted(!YS.muted); return; }
+    if (h.kind === 'tray' && h.type === 'toku' && g.toku <= 0) { YS.deny(); float(L.trayX[3], L.trayY - 60, '審査員が来たら焼ける', '#ffd84d', 13); held = null; return; }
     if (h.kind === 'tray') { held = held && held.kind === 'new' && held.type === h.type ? null : { kind: 'new', type: h.type }; return; }
     if (h.kind === 'slot') {
       if (h.id) { // 置いてある肉：タップで裏返す
@@ -197,7 +215,8 @@
     if (!h) { if (!viaTap) held = null; return; }
     if (src.kind === 'new') {
       if (h.kind === 'slot' && !h.id) {
-        YG.place(g, src.type, h.i);
+        if (!YG.place(g, src.type, h.i)) YS.deny();
+        if (src.type === 'toku' && g.toku <= 0) held = null;
         if (!viaTap) held = null; // タップで持っているときは、続けて置ける
       } else if (h.kind === 'slot') YS.deny();
       return;
@@ -224,6 +243,7 @@
   function burst(x, y, n, color, spread, up) {
     for (let i = 0; i < n; i++) fx.push({ k: 'dot', x, y, vx: (Math.random() - 0.5) * spread, vy: -Math.random() * (up || 120), color, t: 0, life: 0.6 + Math.random() * 0.5, r: 2 + Math.random() * 3 });
   }
+  function banner(text, sub, color, life) { banners = []; banners.push({ text, sub, color, t: 0, life: life || 1.6 }); }
   function smoke(x, y, dark) { fx.push({ k: 'smoke', x: x + (Math.random() - 0.5) * 40, y, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, t: 0, life: 1.4, r: 8, dark }); }
 
   const RANK_TEXT = { perfect: '神焼き!!', great: 'うまい!', good: 'ふつう', meh: 'いまいち', miss: 'ちがう…', raw: 'ナマ!', halfraw: '片面ナマ', burnt: 'コゲ', char: '炭', cold: '冷めた', leave: '帰った' };
@@ -238,8 +258,14 @@
       else if (ev.type === 'discard') YS.discard();
       else if (ev.type === 'rested') { YS.rested(); burst(L.plateX[ev.plate], L.plateY, 6, '#ffd84d', 80, 60); }
       else if (ev.type === 'burning') { YS.burning(); }
+      else if (ev.type === 'fever') { YS.fever(); banner('フィーバー！', '10秒間 点数×' + YG.CFG.feverMult, '#ffd84d'); burst(200, 460, 50, '#ffd84d', 400, 300); }
+      else if (ev.type === 'feverMore') { YS.fever(); banner('フィーバー延長！', '+' + YG.CFG.feverTime + '秒', '#ffd84d', 1.2); }
+      else if (ev.type === 'feverEnd') { YS.feverEnd(); if (ev.broken) banner('フィーバー終了…', '失敗でメーターが0に', '#ff9a8a', 1.2); }
+      else if (ev.type === 'vip') { YS.vip(); banner('審査員が来た！', '特上カルビで 点数×' + YG.CFG.vipMult, '#ffd84d', 2); }
+      else if (ev.type === 'lastOrder') { YS.lastOrder(); banner('ラストオーダー！', '客がどっと来る', '#ff7a2f', 1.6); }
       else if (ev.type === 'leave') {
         YS.leave();
+        if (ev.vip) banner('審査員が帰った…', '', '#ff9a8a', 1.2);
         const seat = g.seats[ev.seat];
         react[ev.seat] = YL.line({ fail: 'leave', rank: 'fail' }, seat.cust.char, bump('leave'));
       } else if (ev.type === 'serve') {
@@ -276,10 +302,17 @@
     last = now;
     dt = Math.min(dt, 0.1); // 画面が止まっても、まとめて進めない
     clock += dt;
+    const playing = mode === 'play' && g && !g.paused && g.state === 'play';
+    YS.bgm(playing ? (g.feverLeft > 0 ? 'fever' : g.lastOrder ? 'last' : 'normal') : 'off');
     if (mode === 'play' && g && !g.paused) {
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
+      // ランクが上がったら、上の欄でポンと知らせる
+      const ri = scoreRank(g.score);
+      if (ri > rankIdx) { rankIdx = ri; rankPop = 1; YS.rankUp(); }
+      // フィーバー中は火の粉が舞う
+      if (g.feverLeft > 0 && Math.random() < dt * 30) fx.push({ k: 'dot', x: 20 + Math.random() * 360, y: 610, vx: (Math.random() - 0.5) * 30, vy: -260 - Math.random() * 120, color: Math.random() < 0.5 ? '#ffd84d' : '#ff7a2f', t: 0, life: 1.2, r: 2 + Math.random() * 2, float: true });
       // 煙（下の面が焦げはじめたら）
       for (let i = 0; i < 6; i++) {
         const id = g.grill[i]; if (!id) continue;
@@ -287,7 +320,7 @@
         const b = m.side[1 - m.up];
         const s = L.slot(i);
         if (b > 1.15 && Math.random() < dt * (b > YG.CFG.burnt ? 14 : 5)) smoke(s.x, s.y - 10, b > YG.CFG.burnt);
-        if (YG.fireName(i) === 'strong' && m.type === 'kalbi' && Math.random() < dt * 3) burst(s.x + (Math.random() - 0.5) * 50, s.y + 20, 2, '#ffb030', 40, 120);
+        if (YG.fireName(i) === 'strong' && (m.type === 'kalbi' || m.type === 'toku') && Math.random() < dt * 3) burst(s.x + (Math.random() - 0.5) * 50, s.y + 20, 2, '#ffb030', 40, 120);
       }
       let sz = 0;
       g.grill.forEach((id, i) => { if (id) sz += YG.CFG.fires[i] * (1 + (g.meats[id].side[1 - g.meats[id].up] > 1.2 ? 0.8 : 0)); });
@@ -296,7 +329,10 @@
       if (g.state === 'play' && g.timeLeft <= 5) { const s = Math.ceil(g.timeLeft); if (s !== lastTick) { lastTick = s; YS.tick(); } }
       if (g.state === 'over' && endAt && clock - endAt > 1.4 && mode === 'play') showResult();
     }
-    for (const f of fx) { f.t += dt; if (f.k !== 'text') { f.x += (f.vx || 0) * dt; f.y += (f.vy || 0) * dt; if (f.k === 'dot') f.vy += 300 * dt; } }
+    for (const f of fx) { f.t += dt; if (f.k !== 'text') { f.x += (f.vx || 0) * dt; f.y += (f.vy || 0) * dt; if (f.k === 'dot' && !f.float) f.vy += 300 * dt; } }
+    for (const b of banners) b.t += dt;
+    banners = banners.filter((b) => b.t < b.life);
+    rankPop = Math.max(0, rankPop - dt * 0.8);
     fx = fx.filter((f) => f.t < f.life);
     shake = Math.max(0, shake - dt);
     render();
@@ -336,7 +372,7 @@
     YD.drawTrash(ctx, t, { hint: !!carryMeat });
     // 網
     const hint = carrying ? g.grill.map((id) => !id) : null;
-    YD.drawGrill(ctx, t, { hint });
+    YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0 });
     for (let i = 0; i < 6; i++) {
       const id = g.grill[i]; if (!id) continue;
       if (dragging && ptr.drag.id === id) continue;
@@ -345,7 +381,7 @@
       const bob = Math.sin(t * 12 + id) * 0.4;
       YD.drawMeat(ctx, m, s.x, s.y + 6 + bob, { scale: 1.12, onGrill: true, t, selected: held && held.kind === 'meat' && held.id === id });
     }
-    YD.drawTray(ctx, t, held && held.kind === 'new' ? held.type : null);
+    YD.drawTray(ctx, t, held && held.kind === 'new' ? held.type : null, g.toku);
     // 演出
     for (const f of fx) {
       const a = 1 - f.t / f.life;
@@ -371,6 +407,20 @@
       ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
       ctx.restore();
     }
+    // 大きな知らせ（網の上に重ねる。操作は止めない）
+    for (const b of banners) {
+      const k = b.t / b.life;
+      const pop = Math.min(1, b.t * 7);
+      const a = Math.min(1, (1 - k) * 4);
+      ctx.save(); ctx.globalAlpha = a;
+      ctx.translate(200, 218 - k * 10); ctx.scale(0.5 + 0.5 * pop + (pop < 1 ? 0.2 : 0), 0.5 + 0.5 * pop);
+      ctx.fillStyle = 'rgba(30,10,0,0.78)'; YD.roundRect(ctx, -170, -40, 340, b.sub ? 76 : 56, 18); ctx.fill();
+      ctx.font = '34px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.lineWidth = 7; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(b.text, 0, 0);
+      ctx.fillStyle = b.color; ctx.fillText(b.text, 0, 0);
+      if (b.sub) { ctx.font = 'bold 15px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(b.sub, 0, 26); }
+      ctx.restore();
+    }
     renderHud(t);
     renderTutorial(t);
     if (g.state === 'over') {
@@ -384,8 +434,40 @@
     ctx.lineWidth = 8; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(text, x, y);
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   }
+  function scoreRank(score) { let i = 0; YG.CFG.ranks.forEach((r, k) => { if (score >= r.min) i = k; }); return i; }
+  const RANK_COLOR = { C: ['#6b6b6b', '#fff'], B: ['#b0703a', '#fff'], A3: ['#c9ced6', '#2a2a2a'], A4: ['#ffd84d', '#3a1a00'], A5: ['#ff5a8a', '#fff'] };
   function renderHud(t) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, W, 44);
+    // フィーバーのメーター（上の欄の下の細い帯）
+    const F = YG.CFG;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 44, W, 6);
+    if (g.feverLeft > 0) {
+      ctx.fillStyle = `hsl(${(t * 400) % 360},90%,60%)`;
+      ctx.fillRect(0, 44, W * Math.min(1, g.feverLeft / F.feverTime), 6);
+    } else {
+      ctx.fillStyle = '#ff7a2f'; ctx.fillRect(0, 44, W * Math.min(1, g.feverGauge / F.feverNeed), 6);
+    }
+    // いまのランクと、次までの近さ
+    const ri = scoreRank(g.score);
+    const rk = F.ranks[ri];
+    const nx = F.ranks[ri + 1];
+    const col = RANK_COLOR[rk.key];
+    const pop = 1 + rankPop * 0.5;
+    ctx.save(); ctx.translate(262, 18); ctx.scale(pop, pop);
+    ctx.fillStyle = col[0]; YD.roundRect(ctx, -24, -12, 48, 22, 7); ctx.fill();
+    ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = col[1];
+    ctx.fillText(rk.key, 0, 5);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 34, 48, 4);
+    if (nx) { ctx.fillStyle = col[0]; ctx.fillRect(238, 34, 48 * Math.min(1, (g.score - rk.min) / (nx.min - rk.min)), 4); }
+    else { ctx.fillStyle = col[0]; ctx.fillRect(238, 34, 48, 4); }
+    if (rankPop > 0) { // ランクアップの知らせ
+      ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
+      ctx.font = '14px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
+      ctx.fillStyle = '#ffd84d'; ctx.fillText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
+      ctx.restore();
+    }
     const tl = Math.ceil(g.timeLeft);
     const hurry = g.state === 'play' && g.timeLeft <= 10;
     ctx.save(); ctx.translate(200, 32);

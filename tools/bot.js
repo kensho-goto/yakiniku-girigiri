@@ -75,15 +75,15 @@ for (const [label, maxGrill, err, react, carry] of [
   ['ふつう（3枚）・余熱を読まない', 3, 0.03, 0.25, false],
   ['ふつう（3枚）・目が粗い', 3, 0.1, 0.4, true],
 ]) {
-  let sum = 0, st = { perfect: 0, great: 0, good: 0, served: 0, leave: 0, carryOver: 0, fail: 0 };
+  let sum = 0, lo = 1e9, hi = 0, fev = 0, vipw = 0, st = { perfect: 0, great: 0, good: 0, served: 0, leave: 0, carryOver: 0, fail: 0 };
   const N = 40;
   for (let s = 1; s <= N; s++) {
     const g = play(s, maxGrill, err, react, carry);
-    sum += g.score;
+    sum += g.score; lo = Math.min(lo, g.score); hi = Math.max(hi, g.score); fev += g.fevers; vipw += g.stats.vipWin || 0;
     for (const k of ['perfect', 'great', 'good', 'served', 'leave', 'carryOver']) st[k] += g.stats[k];
     st.fail += g.stats.raw + g.stats.halfraw + g.stats.burnt + g.stats.char + g.stats.cold;
   }
-  rows.push([label, Math.round(sum / N), ...['served', 'perfect', 'great', 'good', 'leave', 'carryOver', 'fail'].map((k) => (st[k] / N).toFixed(1))]);
+  rows.push([label, Math.round(sum / N), lo + '〜' + hi, (fev / N).toFixed(1), (vipw / N).toFixed(1), ...['served', 'perfect', 'great', 'good', 'leave', 'carryOver', 'fail'].map((k) => (st[k] / N).toFixed(1))]);
 }
-console.log('作戦\t平均点\t出した\t神焼き\tうまい\tふつう\t帰った\t余熱焼けすぎ\t失敗');
+console.log('作戦\t平均点\t最低〜最高\tフィーバー\t審査員○\t出した\t神焼き\tうまい\tふつう\t帰った\t余熱焼けすぎ\t失敗');
 for (const r of rows) console.log(r.join('\t'));

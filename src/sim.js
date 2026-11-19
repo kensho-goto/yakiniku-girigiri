@@ -31,6 +31,28 @@
     arriveGap: [1.5, 3.5], // 客が帰ってから次が来るまで
     anyTypeRate: 0.3, // 「肉はなんでも」の注文の割合
     reactTime: 1.6, // 客が反応している秒数（このあいだも他の操作はできる）
+    // フィーバー：うまい以上が続くと点が倍。コンボが切れたら終わる
+    feverNeed: 4, // メーターがここまでたまると始まる
+    feverGain: { perfect: 2, great: 1, good: 0.5 }, // 1枚でたまる量（ナマ・コゲ・冷め・帰った客で0に戻り、フィーバーも終わる）
+    feverTime: 10, // 秒
+    feverMult: 2,
+    feverArriveMul: 0.4, // フィーバー中は客が早く来る
+    // 審査員：決まった時刻に来て「特上カルビ」を頼む。出せば点が何倍にもなる
+    vipTimes: [22, 48],
+    vipPatience: 20,
+    vipMult: 3,
+    vipStock: 2, // 審査員1人につき、特上カルビを網に置ける枚数
+    // ラストオーダー：残りこの秒数から客がどっと来る
+    lastOrder: 15,
+    lastArriveGap: [0.3, 0.9],
+    // ランク（売上で決まる）。特選A5・規格外は shopRank() で決める
+    ranks: [
+      { key: 'C', min: 0, word: 'スーパーの見切り品' },
+      { key: 'B', min: 300, word: '町の焼肉屋' },
+      { key: 'A3', min: 700, word: 'ちょっといい店' },
+      { key: 'A4', min: 1100, word: '予約がとれない店' },
+      { key: 'A5', min: 1600, word: '霜降りの神' },
+    ],
   };
 
   // 肉の種類。rate＝下の面の焼ける速さ、through＝上の面に伝わる割合、carry＝余熱の大きさ、
@@ -39,12 +61,16 @@
     tan: { name: 'タン', rate: 0.26, through: 0.18, carry: 0.045, rest: 1.5, cool: 8, strongBoost: 1.0, thick: 3 },
     kalbi: { name: 'カルビ', rate: 0.15, through: 0.12, carry: 0.07, rest: 2.0, cool: 10, strongBoost: 1.2, thick: 6 },
     harami: { name: 'ハラミ', rate: 0.1, through: 0.08, carry: 0.12, rest: 2.8, cool: 12, strongBoost: 1.0, thick: 11 },
+    // 審査員が来たときだけ置ける。脂が多く、速く焼けて、強火でよく燃える
+    toku: { name: '特上カルビ', rate: 0.19, through: 0.12, carry: 0.08, rest: 1.8, cool: 8, strongBoost: 1.3, thick: 7, special: true },
   };
+  const TRAY_KEYS = ['tan', 'kalbi', 'harami', 'toku'];
   const TYPE_KEYS = ['tan', 'kalbi', 'harami'];
   const TARGET_KEYS = ['usu', 'hodo', 'kon'];
   const TARGET_NAME = { usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり' };
   const RANKS = ['perfect', 'great', 'good', 'meh', 'miss'];
-  const CHARS = 6; // 客の種類の数（見た目とセリフは lines.js / draw.js）
+  const CHARS = 6; // ふつうの客の種類の数（見た目とセリフは lines.js / draw.js）
+  const VIP_CHAR = 6; // 審査員
 
   function mulberry32(a) {
     return function () {
@@ -81,6 +107,12 @@
       events: [], // 画面・音へ知らせる出来事（main.js が取り出す）
       tutorial: !!opts.tutorial,
       custCount: 0,
+      feverLeft: 0, // フィーバーの残り秒
+      feverGauge: 0, // フィーバーのメーター
+      fevers: 0,
+      vipIdx: 0, vipPending: false,
+      toku: 0, // いま網に置ける特上カルビの枚数
+      lastOrder: false,
     };
     return g;
   }
@@ -98,6 +130,7 @@
   // ===== 操作 =====
   function place(g, type, slot) {
     if (!canAct(g) || !TYPES[type] || slot < 0 || slot > 5 || g.grill[slot]) return null;
+    if (TYPES[type].special) { if (g.toku <= 0) return null; g.toku--; }
     const id = g.nextId++;
     const m = {
       id, type,
@@ -199,13 +232,25 @@
     }
     const comboBefore = g.combo;
     const busyAvg = m.cookTime > 0 ? m.busyInt / m.cookTime : 0;
+    const vip = !!seat.cust.vip;
+    const fever = g.feverLeft > 0;
     let pts = 0;
     if (r.base > 0) {
-      const mult = (1 + CFG.comboStep * Math.min(comboBefore, CFG.comboCap)) * (1 + CFG.busyStep * busyAvg);
+      const mult = (1 + CFG.comboStep * Math.min(comboBefore, CFG.comboCap)) * (1 + CFG.busyStep * busyAvg) * (fever ? CFG.feverMult : 1) * (vip ? CFG.vipMult : 1);
       pts = Math.round(r.base * mult) + (r.rank === 'perfect' ? CFG.perfectBonus : 0);
     }
     if (r.rank === 'perfect' || r.rank === 'great') g.combo++;
-    else if (r.rank !== 'good') g.combo = 0;
+    if (CFG.feverGain[r.rank] && !r.fail) {
+      g.feverGauge += CFG.feverGain[r.rank];
+      if (g.feverGauge >= CFG.feverNeed) {
+        g.feverGauge = 0;
+        if (g.feverLeft <= 0) { g.fevers++; emit(g, 'fever'); } else emit(g, 'feverMore');
+        g.feverLeft += CFG.feverTime;
+      }
+    } else if (!r.fail) {
+      g.combo = 0; // いまいち・ちがうはコンボだけ切れる（メーターとフィーバーは残る）
+    } else breakCombo(g);
+    if (vip) { g.toku = 0; g.stats.vip = (g.stats.vip || 0) + 1; if (r.rank === 'perfect' || r.rank === 'great') g.stats.vipWin = (g.stats.vipWin || 0) + 1; }
     g.maxCombo = Math.max(g.maxCombo, g.combo);
     g.score += pts;
     // 記録
@@ -219,13 +264,19 @@
     if (r.fail === 'burnt' || r.fail === 'char') { if (m.burnedOnStrong) st.burnedOnStrong++; }
     detach(g, m);
     m.loc = 'gone';
-    const entry = { id, type: m.type, side: m.side.slice(), atRemoval: m.atRemoval, warm: m.warm, order: Object.assign({}, order), char: seat.cust.char, result: r, pts, combo: g.combo, busyAvg, burnedOnStrong: m.burnedOnStrong, flips: m.flips };
+    const entry = { id, type: m.type, side: m.side.slice(), atRemoval: m.atRemoval, warm: m.warm, order: Object.assign({}, order), char: seat.cust.char, result: r, pts, combo: g.combo, busyAvg, burnedOnStrong: m.burnedOnStrong, flips: m.flips, vip, fever };
     g.log.push(entry);
     seat.state = 'react';
     seat.timer = CFG.reactTime;
     seat.react = entry;
     emit(g, 'serve', { seat: seatIdx, entry });
     return { ok: true, entry };
+  }
+
+  function breakCombo(g) {
+    g.combo = 0;
+    g.feverGauge = 0;
+    if (g.feverLeft > 0) { g.feverLeft = 0; emit(g, 'feverEnd', { broken: true }); }
   }
 
   // ===== 採点 =====
@@ -303,6 +354,9 @@
     g.t += dt;
     g.timeLeft = Math.max(0, CFG.duration - g.t);
     const busy = onGrillCount(g);
+    if (g.feverLeft > 0) { g.feverLeft = Math.max(0, g.feverLeft - dt); if (g.feverLeft === 0) emit(g, 'feverEnd', { broken: false }); }
+    if (!g.lastOrder && g.timeLeft <= CFG.lastOrder) { g.lastOrder = true; emit(g, 'lastOrder'); }
+    if (g.vipIdx < CFG.vipTimes.length && g.t >= CFG.vipTimes[g.vipIdx]) { g.vipIdx++; g.vipPending = true; }
     // 網の上
     for (let s = 0; s < 6; s++) {
       const id = g.grill[s];
@@ -355,7 +409,8 @@
     g.seats.forEach((seat, i) => {
       if (seat.state === 'empty') {
         seat.nextIn -= dt;
-        if (seat.nextIn <= 0 && g.timeLeft > 4) spawn(g, i, progress);
+        if (g.vipPending && g.timeLeft > 8 && !g.seats.some((o) => o.state === 'wait' && o.cust.vip)) { spawnVip(g, i); }
+        else if (seat.nextIn <= 0 && g.timeLeft > 4) spawn(g, i, progress);
       } else if (seat.state === 'wait') {
         seat.cust.patience -= dt;
         if (seat.cust.patience <= 0) {
@@ -363,16 +418,17 @@
           seat.timer = CFG.reactTime;
           seat.react = { result: { fail: 'leave', rank: 'fail' }, order: seat.cust.order, char: seat.cust.char };
           g.stats.leave++;
-          g.combo = 0;
-          emit(g, 'leave', { seat: i });
+          if (seat.cust.vip) g.toku = 0;
+          breakCombo(g);
+          emit(g, 'leave', { seat: i, vip: !!seat.cust.vip });
         }
       } else {
         seat.timer -= dt;
         if (seat.timer <= 0) {
           seat.state = 'empty';
           seat.cust = null; seat.react = null;
-          const [a, b] = CFG.arriveGap;
-          seat.nextIn = a + g.rng() * (b - a);
+          const [a, b] = g.lastOrder ? CFG.lastArriveGap : CFG.arriveGap;
+          seat.nextIn = (a + g.rng() * (b - a)) * (g.feverLeft > 0 && !g.lastOrder ? CFG.feverArriveMul : 1);
         }
       }
     });
@@ -397,10 +453,36 @@
     emit(g, 'arrive', { seat: i });
   }
 
+  function spawnVip(g, i) {
+    const seat = g.seats[i];
+    g.vipPending = false;
+    const order = { type: 'toku', target: TARGET_KEYS[Math.floor(g.rng() * 3)] };
+    seat.cust = { char: VIP_CHAR, vip: true, order, patience: CFG.vipPatience, maxPatience: CFG.vipPatience, n: g.custCount++ };
+    seat.state = 'wait';
+    g.toku = CFG.vipStock;
+    g.stats.vipCame = (g.stats.vipCame || 0) + 1;
+    emit(g, 'vip', { seat: i });
+  }
+
+  // ランク：売上で C〜A5。失敗なしで神焼きが多ければ特選A5、焦がしすぎは規格外（炭）
+  function shopRank(g) {
+    const st = g.stats;
+    const R = CFG.ranks;
+    let i = 0;
+    for (let k = 0; k < R.length; k++) if (g.score >= R[k].min) i = k;
+    const base = R[i];
+    const next = R[i + 1] ? { key: R[i + 1].key, need: R[i + 1].min - g.score } : null;
+    const fails = st.raw + st.halfraw + st.burnt + st.char + st.cold + st.leave;
+    if (st.burnt + st.char >= 4) return { key: 'kikaku', name: '規格外', word: '炭', byScore: base.key, next, index: -1 };
+    if (base.key === 'A5' && fails === 0 && st.perfect >= 5) return { key: 'tokusen', name: '特選A5', word: '伝説の網', byScore: base.key, next: null, index: R.length };
+    return { key: base.key, name: base.key, word: base.word, next, index: i };
+  }
+
   function end(g) {
     if (g.state === 'over') return;
     g.state = 'over';
     g.timeLeft = 0;
+    g.feverLeft = 0;
     g.leftover = onGrillCount(g) + g.plates.filter((x) => x != null).length;
     emit(g, 'end');
   }
@@ -434,14 +516,16 @@
     if (st.served === 0) return { name: 'ただ肉を眺める人', why: 'だれにも出さなかった' };
     if (st.perfect >= 5) return { name: '神のトング', why: '神焼き ' + st.perfect + '枚' };
     if (st.maxBusy >= 6 && st.great + st.perfect >= 6) return { name: '網の支配者', why: '6枚同時に焼いた' };
+    if ((g.stats.vipWin || 0) >= 2) return { name: '審査員キラー', why: '審査員を2回うならせた' };
+    if (g.fevers >= 3) return { name: 'フィーバー職人', why: 'フィーバー ' + g.fevers + '回' };
     if (g.maxCombo >= 6) return { name: 'コンボ焼き師', why: '最大 ' + g.maxCombo + 'コンボ' };
-    if (g.score >= 1500) return { name: '肉神', why: g.score + '点' };
-    if (g.score >= 800) return { name: '焼肉の鬼', why: g.score + '点' };
-    if (g.score >= 300) return { name: '町の焼き係', why: g.score + '点' };
+    if (g.score >= 2000) return { name: '肉神', why: g.score + '点' };
+    if (g.score >= 1100) return { name: '焼肉の鬼', why: g.score + '点' };
+    if (g.score >= 400) return { name: '町の焼き係', why: g.score + '点' };
     return { name: '見習いトング', why: g.score + '点' };
   }
 
-  const YG = { CFG, TYPES, TYPE_KEYS, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);
