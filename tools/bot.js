@@ -1,10 +1,11 @@
-// 自動で遊ぶ役。難しさ・点の出方を確かめる。 `node tools/bot.js`
+// 自動で遊ぶ役。難しさ・点の出方を確かめる。 `node tools/bot.js`（本番）・`node tools/bot.js --stages`（ステージごと。★の点を決める）
 // maxGrill＝同時に焼く上限、err＝人の目のずれ（焼け具合の見まちがいの幅）、react＝反応の遅れ（秒）
 const YG = require('../src/sim.js');
 const { CFG, TYPES } = YG;
 
-function play(seed, maxGrill, err, react, useCarry) {
-  const g = YG.newGame({ seed });
+function play(seed, maxGrill, err, react, useCarry, stage) {
+  const g = YG.newGame({ seed, stage });
+  const types = g.R.types;
   const rnd = YG.mulberry32(seed * 7 + 1);
   const plan = {}; // meat id → { seat, target, flipAt, offAt }
   const busySeat = new Set();
@@ -20,15 +21,15 @@ function play(seed, maxGrill, err, react, useCarry) {
       if (YG.onGrillCount(g) < maxGrill && free.length) {
         if (waiting.length) {
           const [s, i] = waiting.sort((a, b) => a[0].cust.patience - b[0].cust.patience)[0];
-          const type = s.cust.order.type || 'kalbi';
+          const type = s.cust.order.type || (types.includes('kalbi') ? 'kalbi' : types[0]);
           const slot = free.includes(0) ? 0 : free.includes(3) ? 3 : free[0];
           const id = YG.place(g, type, slot);
           if (id) { plan[id] = { seat: i, target: s.cust.order.target }; busySeat.add(i); }
         } else if (g.state === 'ready' || YG.onGrillCount(g) + g.plates.filter(Boolean).length < maxGrill) {
           // 注文の前に先に焼いておく（よくばり）
-          const tg = ['hodo', 'usu', 'kon'][g.stats.placed % 3];
+          const tg = g.R.targets[g.stats.placed % g.R.targets.length];
           const slot = free.includes(0) ? 0 : free.includes(3) ? 3 : free[0];
-          const id = YG.place(g, ['kalbi', 'tan', 'harami'][g.stats.placed % 3], slot);
+          const id = YG.place(g, types[g.stats.placed % types.length], slot);
           if (id) plan[id] = { seat: -1, target: tg };
         }
       }
@@ -65,6 +66,21 @@ function play(seed, maxGrill, err, react, useCarry) {
     YG.step(g, dt);
   }
   return g;
+}
+
+if (process.argv.includes('--stages')) {
+  // ステージごとに、初心者〜うまい人の点の出方を見る（★1＝初心者が少し慣れると届く、★2＝ふつう、★3＝うまい人の上位）
+  const BOTS = [['初心者', 1, 0.15, 0.8, false], ['慣れた', 2, 0.08, 0.5, true], ['ふつう', 3, 0.03, 0.25, true], ['うまい', 4, 0.02, 0.2, true]];
+  const N = 60;
+  const pct = (a, q) => a.slice().sort((x, y) => x - y)[Math.floor(q * (a.length - 1))];
+  console.log('ステージ\t★(今)\t' + BOTS.map((b) => b[0] + '(中央/上位10%)').join('\t') + '\t初心者★1到達\t慣れた★2到達\tうまい★3到達');
+  YG.STAGES.forEach((st, k) => {
+    const stage = k + 1;
+    const res = BOTS.map(([, mg, err, re, carry]) => { const a = []; for (let s = 1; s <= N; s++) a.push(play(s, mg, err, re, carry, stage).score); return a; });
+    const reach = (a, v) => Math.round(a.filter((x) => x >= v).length / a.length * 100) + '%';
+    console.log([stage + ' ' + st.name, st.stars.join('/'), ...res.map((a) => pct(a, 0.5) + '/' + pct(a, 0.9)), reach(res[0], st.stars[0]), reach(res[1], st.stars[1]), reach(res[3], st.stars[2])].join('\t'));
+  });
+  process.exit(0);
 }
 
 const rows = [];

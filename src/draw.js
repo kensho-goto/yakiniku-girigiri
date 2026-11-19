@@ -271,8 +271,9 @@
     ctx.fillStyle = '#121010';
     roundRect(ctx, G.x, G.y, G.w, G.h, 16); ctx.fill();
     // 炭（列ごとに火力が見える）
+    const fires = opts && opts.fires;
     for (let c = 0; c < 3; c++) {
-      const fn = YG.fireName(c);
+      const fn = YG.fireName(c, fires);
       const k = (fn === 'strong' ? 1 : fn === 'mid' ? 0.62 : 0.3) * (fever ? 1.25 : 1);
       const cx = L.slotX[c];
       for (let r = 0; r < 2; r++) {
@@ -324,10 +325,10 @@
   }
   // 火力の札：肉と煙の上に描く（隠れないように）。暗い台に、火の色の文字
   const FIRE_COLOR = { strong: '#ff6a3a', mid: '#ffc23d', weak: '#8fc3ff' };
-  function drawFireTags(ctx) {
+  function drawFireTags(ctx, fires) {
     const G = L.grill;
     for (let c = 0; c < 3; c++) {
-      const fn = YG.fireName(c);
+      const fn = YG.fireName(c, fires);
       const x = L.slotX[c], y = G.y + 14;
       ctx.fillStyle = 'rgba(20,10,6,0.82)';
       roundRect(ctx, x - 34, y - 12, 68, 22, 11); ctx.fill();
@@ -428,6 +429,7 @@
     ctx.restore();
   }
   const TRAY_NOTE = { tan: 'うすい・早い', kalbi: '脂で燃える', harami: 'あつい・余熱大', toku: '審査員用' };
+  const UNLOCK_AT = { kalbi: 2, harami: 5 }; // ステージで使えるようになる肉
   const trayMeats = {};
   function trayMeat(type) {
     const k = YG.TRAY_KEYS.indexOf(type);
@@ -435,7 +437,8 @@
     return trayMeats[type];
   }
   // toku＝いま置ける特上カルビの枚数（0なら鍵がかかって見える）
-  function drawTray(ctx, t, held, toku) {
+  // allowed：このステージで使える肉（無ければ全部）。使えない肉は鍵と「ステージN〜」
+  function drawTray(ctx, t, held, toku, allowed) {
     const y = L.trayY;
     ctx.fillStyle = '#c99b62';
     roundRect(ctx, 10, y - 52, 380, 106, 14); ctx.fill();
@@ -445,7 +448,8 @@
       const type = YG.TRAY_KEYS[i];
       const x = L.trayX[i];
       const special = type === 'toku';
-      const open = !special || toku > 0;
+      const locked = !special && allowed && !allowed.includes(type);
+      const open = special ? toku > 0 : !locked;
       if (special) {
         // 特上の台：金色。審査員がいるときだけ光る
         ctx.fillStyle = open ? `rgba(255,216,77,${0.55 + 0.25 * Math.sin(t * 6)})` : 'rgba(60,35,15,0.5)';
@@ -462,7 +466,7 @@
       ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 32);
       ctx.font = 'bold 10.5px "Hiragino Sans", sans-serif';
       ctx.fillStyle = '#2a1608';
-      ctx.fillText(special && open ? 'あと' + toku + '枚' : TRAY_NOTE[type], x, y + 46);
+      ctx.fillText(special && open ? 'あと' + toku + '枚' : locked ? (UNLOCK_AT[type] ? 'ステージ' + UNLOCK_AT[type] + 'から' : 'まだ使えない') : TRAY_NOTE[type], x, y + 46);
       if (!open) { // 鍵
         ctx.fillStyle = '#3a2410';
         roundRect(ctx, x - 10, y - 12, 20, 16, 3); ctx.fill();
@@ -475,6 +479,14 @@
   // ===== 客 =====
   const SKIN = ['#f2c9a0', '#c98a5a', '#f5d5b8', '#efc49a', '#f7d2b0', '#f0a24a', '#e8c09a'];
   function drawCustomer(ctx, seat, i, t, react) {
+    if (seat.state === 'closed') { // このステージでは使わない席：のれんに「準備中」
+      const x = L.seatX[i];
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      roundRect(ctx, x - 34, L.counterY - 70, 68, 70, 8); ctx.fill();
+      ctx.fillStyle = 'rgba(255,217,176,0.3)'; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('準備中', x, L.counterY - 30);
+      return;
+    }
     if (seat.state === 'empty') { // 空いた席：いすの背もたれと「空席」
       const x = L.seatX[i];
       ctx.fillStyle = 'rgba(0,0,0,0.25)';

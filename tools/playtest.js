@@ -103,7 +103,7 @@ const server = http.createServer((req, res) => {
         const j = JSON.parse(body);
         j.recv = new Date().toISOString();
         fs.appendFileSync(LOG, JSON.stringify(j) + '\n');
-        if (j.kind === 'end') console.log(`🍖 ${j.name || '名無し'}：${j.score}点（${j.rank}）`);
+        if (j.kind === 'end') console.log(`🍖 ${j.name || '名無し'}：${j.stage ? 'ステージ' + j.stage + ' ★' + j.stars : '本番'} ${j.score}点${j.stage ? '' : '（' + j.rank + '）'}`);
         if (j.kind === 'feedback') console.log(`💬 ${j.name || '名無し'}：${j.face} ${j.text || ''}`);
       } catch (e) { /* こわれた記録は捨てる */ }
       send(res, 204, 'text/plain', '');
@@ -190,7 +190,23 @@ function reportPage() {
   const faceCount = {}; fbs.forEach((f) => { faceCount[f.face] = (faceCount[f.face] || 0) + 1; });
   const sum = (k) => ends.reduce((s, e) => s + (e[k] || 0), 0);
   const fails = [['ナマ・片面ナマ', sum('raw') + sum('halfraw')], ['コゲ・炭', sum('burnt') + sum('char')], ['冷めた', sum('cold')], ['待たせて帰った', sum('leave')], ['余熱で焼けすぎ', sum('carryOver')], ['時間切れで残った', sum('leftover')], ['捨てた', sum('discard')]].sort((a, b) => b[1] - a[1]);
-  const rankCount = {}; ends.forEach((e) => { rankCount[e.rank] = (rankCount[e.rank] || 0) + 1; });
+  const rankCount = {}; ends.filter((e) => !e.stage).forEach((e) => { rankCount[e.rank] = (rankCount[e.rank] || 0) + 1; });
+  // ステージごと：むずかしすぎ・やさしすぎを見る
+  const stg = {};
+  for (const pl of plays.values()) {
+    if (!pl.start) continue;
+    const k = pl.start.stage || 0;
+    const r = stg[k] = stg[k] || { people: new Set(), ends: 0, clear: 0, stars: 0, scores: [], notDone: 0, confused: 0, tries: [] };
+    r.people.add(pl.pid);
+    if (pl.end) { r.ends++; r.scores.push(pl.end.score); r.stars += pl.end.stars || 0; if ((pl.end.stars || 0) >= 1) r.clear++; } else r.notDone++;
+  }
+  for (const f of fbs) { const m = /^S(\d)$/.exec(f.rank || ''); const k = m ? Number(m[1]) : 0; if (stg[k] && f.face === 'confused') stg[k].confused++; }
+  // はじめて★1を取るまでに、何回最後まで遊んだか（人ごと）
+  for (const p of ps) {
+    const byStage = {};
+    for (const e of p.ends) { if (!e.stage) continue; const b = byStage[e.stage] = byStage[e.stage] || { n: 0, done: false }; if (b.done) continue; b.n++; if ((e.stars || 0) >= 1) { b.done = true; stg[e.stage] && stg[e.stage].tries.push(b.n); } }
+  }
+  const STAGE_NAME = ['本番', '屋台', '裏を読む', '好みを聞く', '火を使い分ける', '余熱を読む', '満席', '審査員'];
   const again = ps.filter((p) => p.ends.length >= 2).length; // 最後まで2回以上
   const t = (ms) => new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   // 1回ごとの終わり方（最後まで / やり直し・タイトルへ / 別のアプリへ行ったまま）
@@ -229,6 +245,10 @@ function reportPage() {
     return `<li>${esc(pl.name || '名無し')}：${last ? last.t + '秒目で' : ''}${how}${last ? `（その時 ${last.score}点${last.tutorial ? '・説明の途中' : ''}）` : ''}<small>${pl.phone}・${t(pl.start.at)}</small></li>`;
   }).join('');
   const perRows = Object.entries(per).map(([k, r]) => `<tr><td>${TYPE_NAME[k] || k}</td><td>${r.n}</td><td>${pct(r.good, r.n)}</td><td>${r.under}</td><td>${r.over}</td><td>${r.carry}</td><td>${r.raw}</td><td>${r.burnt}</td></tr>`).join('');
+  const stageRows = Object.keys(stg).map(Number).sort((a, b) => (a || 99) - (b || 99)).map((k) => {
+    const r = stg[k];
+    return `<tr><td>${k ? k + ' ' : ''}${STAGE_NAME[k] || k}</td><td>${r.people.size}</td><td>${r.ends}${r.notDone ? `<small>途中まで ${r.notDone}</small>` : ''}</td><td>${k ? pct(r.clear, r.ends) : '-'}</td><td>${k && r.ends ? (r.stars / r.ends).toFixed(1) : '-'}</td><td>${k && r.tries.length ? (r.tries.reduce((a, b) => a + b, 0) / r.tries.length).toFixed(1) + '回' : '-'}</td><td>${r.scores.length ? avg(r.scores) : '-'}</td><td>${r.confused || ''}</td></tr>`;
+  }).join('');
   const devRows = Object.entries(dev).map(([k, d]) => `<tr><td>${k}</td><td>${d.people}</td><td>${d.ends}</td><td>${pct(d.again, d.people)}</td><td>${d.scores.length ? avg(d.scores) : '-'}</td></tr>`).join('');
 
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>試遊会の集計</title>
@@ -251,11 +271,13 @@ ${card(ends.length ? avg(ends.map((e) => e.score)) : '-', '平均の点')}
 <h2>感想</h2>
 ${Object.keys(FACE).map((k) => bar(FACE[k], faceCount[k] || 0, 30)).join('')}
 <ul style="margin-top:10px">${comments || '<li>まだありません</li>'}</ul>
+<h2>ステージごと</h2><div class="note">★1を取れた割合が低い・★1までの回数が多い・「わかりにくい」が多いステージが、むずかしすぎるところ</div>
+<table><tr><th>ステージ</th><th>人</th><th>最後まで</th><th>★1以上</th><th>平均★</th><th>★1までの回数</th><th>平均の点</th><th>😵</th></tr>${stageRows || '<tr><td colspan=8>まだありません</td></tr>'}</table>
 <h2>人ごと</h2><table><tr><th>名前</th><th>最後まで</th><th>最高点</th><th>最初 → 最後</th><th>感想</th></tr>${rows || '<tr><td colspan=5>まだいません</td></tr>'}</table>
 <h2>どこで読みちがえたか（出した肉1枚ずつ）</h2>
 <table><tr><th>肉</th><th>出した</th><th>うまい以上</th><th>焼き足りない</th><th>焼きすぎ</th><th>余熱で焼けすぎ</th><th>ナマ</th><th>コゲ</th></tr>${perRows || '<tr><td colspan=8>まだありません</td></tr>'}</table>
 <h2>多かった失敗（全員の合計）</h2>${fails.map(([k, n]) => bar(k, n, 12)).join('')}
-<h2>ランク</h2>${RANKS.map((k) => bar(RANK_NAME[k] || k, rankCount[k] || 0, 30)).join('')}
+<h2>ランク（本番だけ）</h2>${RANKS.map((k) => bar(RANK_NAME[k] || k, rankCount[k] || 0, 30)).join('')}
 <h2>機種ごと</h2><table><tr><th>機種</th><th>人</th><th>最後まで</th><th>2回以上</th><th>平均の点</th></tr>${devRows || '<tr><td colspan=5>まだいません</td></tr>'}</table>
 <h2>最後まで遊ばなかった回</h2><ul>${quitList || '<li>まだありません</li>'}</ul>
 </body></html>`;

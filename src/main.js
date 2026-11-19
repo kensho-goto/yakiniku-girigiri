@@ -22,6 +22,8 @@
   let rankIdx = 0, rankPop = 0, comboPop = 0;
   let resumeT = 0; // 一時停止から戻るときの 3・2・1
   let demoAcc = 0; // タイトルの見本を、画面の速さに関係なく進める
+  let stage = 1; // いま（次に）遊ぶステージ。0＝本番
+  let tip = null, tipsDone = {}; // ステージで新しく覚えることを、その場で1回だけ教える { x, y, text, t }
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -63,16 +65,69 @@
   }
 
   // ===== はじまり・おわり =====
-  function newRun() {
+  // ===== ステージの進み具合（★はステージごとの最高） =====
+  const NS = YG.STAGES.length;
+  function starsMap() { return store.get('yaki.stars', {}) || {}; }
+  function unlocked(k) { return k === 0 || k === 1 || (starsMap()[k - 1] || 0) >= 1; }
+  function nextStage() { const sm = starsMap(); for (let k = 1; k <= NS; k++) if (!(sm[k] >= 1)) return k; return 0; }
+  function starHtml(n) { return '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>'; }
+  function stageLabel(k) { return k ? `ステージ${k}「${YG.STAGES[k - 1].name}」` : '本番（自由に焼く）'; }
+
+  // はじめて遊ぶステージは、先に「新しく覚えること」を見せる
+  function begin(k) {
+    if (window.YP && !YP.canStart()) return; // 試遊会：名前を入れてから
+    if (!unlocked(k)) return;
+    stage = k;
+    const seen = store.get('yaki.seen', {}) || {};
+    if (k > 0 && !seen[k]) { showIntro(k); return; }
+    newRun(k);
+  }
+  function showIntro(k) {
+    const st = YG.STAGES[k - 1];
+    $('introNo').textContent = 'ステージ ' + k + ' / ' + NS;
+    $('introName').textContent = st.name;
+    $('introList').innerHTML = st.intro.map((t) => `<li>${t}</li>`).join('');
+    $('introGoal').innerHTML = `★1 <b>${st.stars[0]}</b>点　★2 <b>${st.stars[1]}</b>点　★3 <b>${st.stars[2]}</b>点　（${YG.ruleOf(k).duration}秒）`;
+    ['title', 'stages', 'result', 'pause'].forEach((id) => { $(id).hidden = true; });
+    $('intro').hidden = false;
+  }
+  $('introGo').onclick = () => {
+    const seen = store.get('yaki.seen', {}) || {};
+    seen[stage] = 1; store.set('yaki.seen', seen);
+    newRun(stage);
+  };
+  function showStages() {
+    if (window.YP && !YP.canStart()) return;
+    const sm = starsMap();
+    const cur = nextStage();
+    let html = '';
+    for (let k = 1; k <= NS; k++) {
+      const st = YG.STAGES[k - 1], open = unlocked(k);
+      html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '🔒'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st stars">${starHtml(sm[k] || 0)}</span></button>`;
+    }
+    const total = Object.values(sm).reduce((a, b) => a + b, 0);
+    html += `<button class="srow free" data-k="0"><span class="no">本番</span><span class="tx"><b>本番（自由に焼く）</b><small>${cur ? '全部できる人は、とばしてここから' : 'ランクで勝負。自己ベストをねらう'}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
+    html += `<div class="goal" style="text-align:center">★ ${total} / ${NS * 3}</div>`;
+    $('stageList').innerHTML = html;
+    $('stageList').querySelectorAll('.srow').forEach((b) => { b.onclick = () => { if (!b.disabled) begin(Number(b.dataset.k)); }; });
+    ['title', 'result'].forEach((id) => { $(id).hidden = true; });
+    $('stages').hidden = false;
+  }
+  $('stageBtn').onclick = showStages;
+  $('rStages').onclick = showStages;
+  $('stagesClose').onclick = () => { $('stages').hidden = true; if (mode === 'result') $('result').hidden = false; else toTitle(); };
+
+  function newRun(k) {
     if (window.YP && !YP.canStart()) return; // 試遊会：名前を入れてから
     if (g && mode === 'play' && window.YP) YP.quit(g, 'retry');
+    if (k != null) stage = k;
     tut = store.get('yaki.tut', 0) >= 4 ? 4 : 0;
-    g = YG.newGame({ tutorial: tut < 4 });
+    g = YG.newGame({ tutorial: tut < 4 && stage <= 1, stage });
     held = null; ptr = null; fx = []; react.fill(null); shake = 0; endAt = 0; lastTick = -1;
-    banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0;
+    banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {};
     acc = 0; last = null;
     mode = 'play';
-    ['title', 'pause', 'result'].forEach((id) => { $(id).hidden = true; });
+    ['title', 'pause', 'result', 'stages', 'intro'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
   }
@@ -89,7 +144,7 @@
   function toTitle() {
     if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
     mode = 'title'; g = null;
-    ['pause', 'result'].forEach((id) => { $(id).hidden = true; });
+    ['pause', 'result', 'stages', 'intro'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
     YS.silence();
     showBest();
@@ -97,7 +152,11 @@
   function showBest() {
     const b = store.get('yaki.best', 0);
     const br = store.get('yaki.bestRank', null);
-    $('titleBest').innerHTML = b ? `自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '';
+    const k = nextStage();
+    const sm = starsMap();
+    const total = Object.values(sm).reduce((a, c) => a + c, 0);
+    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b><br>${YG.STAGES[k - 1].learn}` : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう';
+    $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
   }
   showBest();
   // 文字の形（Dela Gothic One）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
@@ -107,10 +166,11 @@
     const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Dela Gothic One"', '焼肉0123') : Promise.resolve();
     Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = '焼く'; });
   })();
-  $('startBtn').onclick = newRun;
-  $('againBtn').onclick = newRun;
+  $('startBtn').onclick = () => begin(nextStage());
+  $('againBtn').onclick = () => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); };
+  $('rRetry').onclick = () => newRun(stage);
   $('resumeBtn').onclick = () => pause(false);
-  $('retryBtn').onclick = newRun;
+  $('retryBtn').onclick = () => newRun(stage);
   $('toTitleBtn').onclick = toTitle;
   $('rTitleBtn').onclick = toTitle;
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
@@ -119,12 +179,61 @@
   function showResult() {
     mode = 'result';
     YS.silence();
-    const best = store.get('yaki.best', 0);
-    const isNew = g.score > best && best > 0;
-    if (isNew) store.set('yaki.best', g.score);
     store.set('yaki.plays', store.get('yaki.plays', 0) + 1);
     $('rScore').textContent = g.score;
     $('rCost').textContent = (g.leftoverCost || 0) + (g.wasteCost || 0) > 0 ? `（肉代 −${(g.leftoverCost || 0) + (g.wasteCost || 0)}：捨てた・残した肉）` : '';
+    $('againBtn').textContent = 'もう一回'; delete $('againBtn').dataset.next;
+    $('rRetry').hidden = true; $('rStages').hidden = false;
+    if (g.stage) showStageResult(); else showFreeResult();
+    const tt = YG.title(g);
+    $('rTitle').textContent = tt.name;
+    $('rWhy').textContent = '（' + tt.why + '）';
+    const st = g.stats, R = g.R;
+    const cells = [['神焼き', st.perfect], ['うまい', st.great], R.fever && ['フィーバー', g.fevers], R.vip && ['審査員○', (st.vipWin || 0) + '/' + (st.vipCame || 0)],
+      ['ナマ', st.raw + st.halfraw], ['コゲ・炭', st.burnt + st.char], ['冷め', st.cold], ['帰った', st.leave]].filter(Boolean);
+    $('rStats').style.gridTemplateColumns = `repeat(${cells.length > 6 ? 4 : 3}, 1fr)`;
+    $('rStats').innerHTML = cells.map(([k, v]) => `<div><b>${v}</b>${k}</div>`).join('');
+    const ls = YG.lessons(g).slice(0, 2);
+    $('rLessons').innerHTML = ls.length
+      ? ls.map((l) => `<div><b>${l.text} ×${l.n}</b><small>次は：${l.tip}</small></div>`).join('')
+      : (st.served ? '<div><b>失敗なし！</b><small>次は：もっと置いて、にぎやかに</small></div>' : '<div><b>だれにも出さなかった</b><small>次は：焼けた肉を皿へ、そして客へ</small></div>');
+    $('ptFeedback').hidden = true;
+    if (window.YP) YP.end(g, g.stage ? { key: 'S' + g.stage } : YG.shopRank(g), tt);
+    $('result').hidden = false;
+  }
+  // ステージの結果：★と、次のステージが開いたか
+  function showStageResult() {
+    const k = g.stage, st = YG.STAGES[k - 1];
+    const n = YG.starsOf(g);
+    const sm = starsMap();
+    const before = sm[k] || 0;
+    if (n > before) { sm[k] = n; store.set('yaki.stars', sm); }
+    const sb = store.get('yaki.stageBest', {}) || {};
+    const bestBefore = sb[k] || 0;
+    if (g.score > bestBefore) { sb[k] = g.score; store.set('yaki.stageBest', sb); }
+    const stamp = $('rRank');
+    stamp.className = 'rank r-stage' + (n ? '' : ' r-stage0');
+    stamp.innerHTML = `<span class="rk">${starHtml(n)}</span><span class="rw">ステージ${k}「${st.name}」</span>`;
+    stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
+    const opened = n >= 1 && before === 0 && k < NS;
+    const need = st.stars[n];
+    $('rNext').innerHTML = opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `★1まで あと <b>${need - g.score}</b>点` : n < 3 ? `★${n + 1}まで あと <b>${need - g.score}</b>点` : '★3 達成！';
+    if (n >= 1 && before === 0 && k === NS) $('rNext').innerHTML = '全ステージ クリア！ 本番が待っている';
+    setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(n * 1.5); } }, 350);
+    $('rNew').innerHTML = n > before && before > 0 ? '<span class="new">★更新！</span>' : g.score > bestBefore && bestBefore > 0 ? '<span class="new">ステージの自己ベスト！</span>' : '';
+    $('rBest').innerHTML = bestBefore > 0 ? `このステージの自己ベスト <b>${Math.max(bestBefore, g.score)}</b>` : '';
+    // 次へ進めるなら、大きいボタンは「次のステージへ」
+    if (n >= 1) {
+      const nk = k < NS ? k + 1 : 0;
+      $('againBtn').textContent = nk ? '次のステージへ' : '本番へ';
+      $('againBtn').dataset.next = String(nk);
+      $('rRetry').hidden = false;
+    }
+  }
+  function showFreeResult() {
+    const best = store.get('yaki.best', 0);
+    const isNew = g.score > best && best > 0;
+    if (g.score > best) store.set('yaki.best', g.score);
     // ランクの判子
     const rk = YG.shopRank(g);
     const order = ['kikaku', 'C', 'B', 'A3', 'A4', 'A5', 'tokusen'];
@@ -139,21 +248,7 @@
     $('rNext').innerHTML = rk.key === 'kikaku' ? '焦がしすぎて格付けできません' : nx ? `${nx.key}まで あと <b>${nx.need}</b>点` : rk.key === 'A5' ? '失敗なし＋神焼き5枚で <b>特選A5</b>' : '最高ランク！';
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(Math.max(0, rk.index)); } }, 350);
     $('rNew').innerHTML = isNew && g.score > 0 ? '<span class="new">自己ベスト更新！</span>' : '';
-    $('rBest').innerHTML = best > 0 ? `自己ベスト <b>${Math.max(best, g.score)}</b>` : 'はじめての記録';
-    const tt = YG.title(g);
-    $('rTitle').textContent = tt.name;
-    $('rWhy').textContent = '（' + tt.why + '）';
-    const st = g.stats;
-    const cells = [['神焼き', st.perfect], ['うまい', st.great], ['フィーバー', g.fevers], ['審査員○', (st.vipWin || 0) + '/' + (st.vipCame || 0)],
-      ['ナマ', st.raw + st.halfraw], ['コゲ・炭', st.burnt + st.char], ['冷め', st.cold], ['帰った', st.leave]];
-    $('rStats').innerHTML = cells.map(([k, v]) => `<div><b>${v}</b>${k}</div>`).join('');
-    const ls = YG.lessons(g).slice(0, 2);
-    $('rLessons').innerHTML = ls.length
-      ? ls.map((l) => `<div><b>${l.text} ×${l.n}</b><small>次は：${l.tip}</small></div>`).join('')
-      : (st.served ? '<div><b>失敗なし！</b><small>次は：もっと置いて、にぎやかに</small></div>' : '<div><b>だれにも出さなかった</b><small>次は：焼けた肉を皿へ、そして客へ</small></div>');
-    $('ptFeedback').hidden = true;
-    if (window.YP) YP.end(g, rk, tt);
-    $('result').hidden = false;
+    $('rBest').innerHTML = best > 0 ? `本番の自己ベスト <b>${Math.max(best, g.score)}</b>` : 'はじめての本番の記録';
   }
 
   // ===== 当たり判定 =====
@@ -205,7 +300,7 @@
     ptr.x = p.x; ptr.y = p.y;
     if (!ptr.drag && Math.hypot(p.x - ptr.sx, p.y - ptr.sy) > 12) {
       const h = ptr.h;
-      if (h && h.kind === 'tray' && (h.type !== 'toku' || g.toku > 0)) ptr.drag = { kind: 'new', type: h.type };
+      if (h && h.kind === 'tray' && (h.type === 'toku' ? g.toku > 0 : g.R.types.includes(h.type))) ptr.drag = { kind: 'new', type: h.type };
       else if (h && (h.kind === 'slot' || h.kind === 'plate') && h.id && g.meats[h.id] && g.meats[h.id].loc !== 'gone') ptr.drag = { kind: 'meat', id: h.id };
       if (ptr.drag) { clearTimeout(ptr.long); held = null; }
     }
@@ -228,6 +323,7 @@
     if (h.kind === 'pause') { pause(true); return; }
     if (h.kind === 'sound') { const lv = YS.cycle(); float(315, 64, ['音あり', '音楽だけ消した', '音を消した'][lv], '#fff', 13, 1.2); return; }
     if (h.kind === 'tray' && h.type === 'toku' && g.toku <= 0) { YS.deny(); float(L.trayX[3], L.trayY - 60, '審査員が来たら焼ける', '#ffd84d', 13); held = null; return; }
+    if (h.kind === 'tray' && h.type !== 'toku' && !g.R.types.includes(h.type)) { YS.deny(); float(L.trayX[YG.TRAY_KEYS.indexOf(h.type)], L.trayY - 60, 'このステージでは使わない', '#ffd84d', 13); held = null; return; }
     if (h.kind === 'tray') { held = held && held.kind === 'new' && held.type === h.type ? null : { kind: 'new', type: h.type }; return; }
     if (h.kind === 'slot') {
       if (h.id) { // 置いてある肉：タップで裏返す
@@ -332,6 +428,23 @@
       } else if (ev.type === 'end') { YS.end(); endAt = clock; if (ev.leftoverCost) float(200, 440, '残した肉 −' + ev.leftoverCost, '#ff9a8a', 20, 1.4); }
     }
   }
+  // ステージの案内：まだ★1を取っていないステージだけ、起きたときに1回だけ
+  function showTip(key, x, y, text) { if (tipsDone[key]) return; tipsDone[key] = 1; tip = { x, y, text, t: 0 }; }
+  function checkTips(dt) {
+    if (tip) { tip.t += dt; if (tip.t > 3.2) tip = null; }
+    if (!g.stage || tut < 4 || g.state !== 'play' || (starsMap()[g.stage] || 0) >= 1) return;
+    const k = g.stage;
+    for (let i = 0; i < 6; i++) {
+      const id = g.grill[i]; if (!id) continue;
+      const m = g.meats[id], b = m.side[1 - m.up], s = L.slot(i);
+      if (k === 2 && b > 0.5 && b < 0.9) showTip('juice', s.x, s.y + 66, '肉汁＝下が焼けた合図');
+      if (k === 2 && b > 1.15) showTip('smoke', s.x, s.y + 66, '煙＝下が焦げはじめ！ 返すか上げる');
+      if (k === 4 && YG.fireName(i, g.R.fires) === 'strong' && b > 1.0) showTip('strong', s.x, s.y + 66, '焦げそう？ 弱火へドラッグで逃がせる');
+    }
+    if (k === 3) g.seats.forEach((st, i) => { if (st.state === 'wait' && st.cust.order.target !== 'hodo') showTip('target', L.seatX[i], 232, '焼き色の見本に合わせる'); });
+    if (k === 5) g.plates.forEach((id, p) => { if (id && g.meats[id].rest && !g.meats[id].restDone) showTip('carry', L.plateX[p], L.plateY + 56, '輪が回るあいだは、まだ焼ける'); });
+    if (k === 6 && YG.activeCount(g) >= 3) showTip('busy', 200, L.counterY + 50, '3枚同時で 点×1.2！');
+  }
   function bump(k) { nReact[k] = (nReact[k] || 0) + 1; return nReact[k] - 1; }
   function setTut(n) { tut = n; if (n >= 4) store.set('yaki.tut', 4); }
 
@@ -350,8 +463,9 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
+      checkTips(dt);
       // ランクが上がったら、上の欄でポンと知らせる
-      const ri = scoreRank(g.score);
+      const ri = g.stage ? YG.starsOf(g) : scoreRank(g.score);
       if (ri > rankIdx) { rankIdx = ri; rankPop = 1; YS.rankUp(); }
       // フィーバー中は火の粉が舞う
       if (g.feverLeft > 0 && Math.random() < dt * 30) fx.push({ k: 'dot', x: 20 + Math.random() * 360, y: 610, vx: (Math.random() - 0.5) * 30, vy: -260 - Math.random() * 120, color: Math.random() < 0.5 ? '#ffd84d' : '#ff7a2f', t: 0, life: 1.2, r: 2 + Math.random() * 2, float: true });
@@ -362,10 +476,10 @@
         const b = m.side[1 - m.up];
         const s = L.slot(i);
         if (b > 1.15 && Math.random() < dt * (b > YG.CFG.burnt ? 14 : 5)) smoke(s.x, s.y - 46, b > YG.CFG.burnt); // 肉の奥から立つ（表面を隠さない）
-        if (YG.fireName(i) === 'strong' && (m.type === 'kalbi' || m.type === 'toku') && Math.random() < dt * 3) burst(s.x + (Math.random() - 0.5) * 50, s.y + 20, 2, '#ffb030', 40, 120);
+        if (YG.fireName(i, g.R.fires) === 'strong' && (m.type === 'kalbi' || m.type === 'toku') && Math.random() < dt * 3) burst(s.x + (Math.random() - 0.5) * 50, s.y + 20, 2, '#ffb030', 40, 120);
       }
       let sz = 0;
-      g.grill.forEach((id, i) => { if (id) sz += YG.CFG.fires[i] * (1 + (g.meats[id].side[1 - g.meats[id].up] > 1.2 ? 0.8 : 0)); });
+      g.grill.forEach((id, i) => { if (id) sz += g.R.fires[i] * (1 + (g.meats[id].side[1 - g.meats[id].up] > 1.2 ? 0.8 : 0)); });
       if (g.state === 'over') YS.silence(); else YS.sizzle(sz);
       // 残り5秒の音
       if (g.state === 'play' && g.timeLeft <= 5) { const s = Math.ceil(g.timeLeft); if (s !== lastTick) { lastTick = s; YS.tick(); } }
@@ -432,7 +546,7 @@
     YD.drawTrash(ctx, t, { hint: !!carryMeat });
     // 網
     const hint = carrying ? g.grill.map((id) => !id) : null;
-    YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0 });
+    YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0, fires: g.R.fires });
     for (let i = 0; i < 6; i++) {
       const id = g.grill[i]; if (!id) continue;
       if (dragging && ptr.drag.id === id) continue;
@@ -441,7 +555,7 @@
       const bob = Math.sin(t * 12 + id) * 0.4;
       YD.drawMeat(ctx, m, s.x, s.y + 6 + bob, { scale: 1.12, onGrill: true, t, selected: held && held.kind === 'meat' && held.id === id });
     }
-    YD.drawTray(ctx, t, held && held.kind === 'new' ? held.type : null, g.toku);
+    YD.drawTray(ctx, t, held && held.kind === 'new' ? held.type : null, g.toku, g.R.types);
     // 演出
     for (const f of fx) {
       const a = 1 - f.t / f.life;
@@ -452,7 +566,7 @@
         ctx.globalAlpha = a; ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
       }
     }
-    YD.drawFireTags(ctx);
+    YD.drawFireTags(ctx, g.R.fires);
     // 長押しで「持つ」までの輪
     if (ptr && !ptr.drag && !ptr.handled && ptr.h && ptr.h.kind === 'slot' && ptr.h.id) {
       const k = (performance.now() - ptr.t0 - 200) / (LONG_MS - 200);
@@ -476,6 +590,7 @@
     }
     renderHud(t);
     renderTutorial(t);
+    if (tip && g.state !== 'over') bubble(tip.x, tip.y, tip.text, -1, t);
     if (resumeT > 0) {
       ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(ext.x0, ext.y0, ext.x1 - ext.x0, ext.y1 - ext.y0);
       bigText(String(Math.ceil(resumeT / 0.5)), 200, 470, 90, '#ffd84d');
@@ -514,13 +629,15 @@
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(ext.x0, ext.y0, ext.x1 - ext.x0, 44 - ext.y0);
     // フィーバーのメーター（上の欄の下の細い帯）
     const F = YG.CFG;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(ext.x0, 44, ext.x1 - ext.x0, 6);
-    if (g.feverLeft > 0) {
+    if (g.R.fever) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(ext.x0, 44, ext.x1 - ext.x0, 6); }
+    if (!g.R.fever) { /* フィーバーのメーターはステージ6から */ } else if (g.feverLeft > 0) {
       ctx.fillStyle = `hsl(${(t * 400) % 360},90%,60%)`;
       ctx.fillRect(0, 44, W * Math.min(1, g.feverLeft / F.feverTime), 6);
     } else {
       ctx.fillStyle = '#ff7a2f'; ctx.fillRect(0, 44, W * Math.min(1, g.feverGauge / F.feverNeed), 6);
     }
+    if (g.stage) renderStars(); else renderRank();
+    function renderRank() {
     // いまのランクと、次までの近さ
     const ri = scoreRank(g.score);
     const rk = F.ranks[ri];
@@ -544,6 +661,28 @@
       ctx.fillStyle = '#ffd84d'; ctx.fillText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
       ctx.restore();
     }
+    }
+    // ステージ：★3つと、次の★までの近さ
+    function renderStars() {
+      const st = YG.STAGES[g.stage - 1];
+      const n = YG.starsOf(g);
+      const pop = 1 + rankPop * 0.35;
+      ctx.save(); ctx.translate(262, 20); ctx.scale(pop, pop);
+      ctx.font = '15px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = i < n ? '#ffd84d' : 'rgba(255,255,255,0.22)'; ctx.fillText('★', -16 + i * 16, 4); }
+      ctx.restore();
+      const lo = n ? st.stars[n - 1] : 0, hi = st.stars[Math.min(2, n)];
+      ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 32, 48, 4);
+      ctx.fillStyle = '#ffd84d'; ctx.fillRect(238, 32, 48 * (n >= 3 ? 1 : Math.max(0, Math.min(1, (g.score - lo) / (hi - lo)))), 4);
+      if (rankPop > 0) {
+        ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
+        ctx.font = '14px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+        const tx = n >= 3 ? '★3!' : '★' + n + '!';
+        ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(tx, 262, 66 - (1 - rankPop) * 8);
+        ctx.fillStyle = '#ffd84d'; ctx.fillText(tx, 262, 66 - (1 - rankPop) * 8);
+        ctx.restore();
+      }
+    }
     const tl = Math.ceil(g.timeLeft);
     const hurry = g.state === 'play' && g.timeLeft <= 10;
     ctx.save(); ctx.translate(200, 32);
@@ -562,7 +701,7 @@
       ctx.restore();
     }
     const busy = YG.activeCount(g);
-    if (busy >= 2 && g.state === 'play') { ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.textAlign = 'left'; ctx.fillText(busy + '枚同時 点×' + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 38); }
+    if (g.R.busy && busy >= 2 && g.state === 'play') { ctx.font = 'bold 11px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd9b0'; ctx.textAlign = 'left'; ctx.fillText(busy + '枚同時 点×' + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 38); }
     // 音・一時停止ボタン
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     YD.roundRect(ctx, 296, 6, 38, 32, 10); ctx.fill();
@@ -582,13 +721,20 @@
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; YD.roundRect(ctx, 70, 228, 260, 34, 17); ctx.fill();
       ctx.font = 'bold 14px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
       ctx.fillText('最初の1枚を置いたらスタート', 200, 250);
+      if (g.stage) {
+        const st = YG.STAGES[g.stage - 1];
+        ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
+        ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
+        const tx = 'ステージ' + g.stage + '「' + st.name + '」';
+        ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
+      }
     }
   }
   // はじめての1回：やることを、その場所に1つずつ出す
   function renderTutorial(t) {
     if (tut >= 4 || g.state === 'over') return;
     let x, y, text, dir = 1;
-    if (tut === 0) { x = L.trayX[1]; y = L.trayY - 62; text = 'カルビを網へドラッグ'; }
+    if (tut === 0) { const ty = g.R.types.includes('kalbi') ? 'kalbi' : g.R.types[0]; x = L.trayX[YG.TRAY_KEYS.indexOf(ty)]; y = L.trayY - 62; text = YG.TYPES[ty].name + 'を網へドラッグ'; }
     else if (tut === 1) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
@@ -606,6 +752,10 @@
       text = m && m.restDone ? '注文した客へドラッグ' : '客へドラッグ（余熱が終わったら出る）';
     }
     if (!text) return;
+    bubble(x, y, text, dir, t);
+  }
+  // 黄色い案内の吹き出し（dir：1＝下を指す、-1＝上を指す）
+  function bubble(x, y, text, dir, t) {
     ctx.font = 'bold 15px "Hiragino Sans", sans-serif';
     const w = ctx.measureText(text).width + 24;
     const bx = Math.max(8, Math.min(W - 8 - w, x - w / 2));

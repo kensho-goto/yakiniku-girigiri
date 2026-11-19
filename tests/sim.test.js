@@ -448,3 +448,48 @@ test('予約：網から客へ運ぶと皿へ上がり、余熱が終わった�
   assert.equal(g.meats[id2].loc, 'plate');
   assert.equal(g.meats[id2].reserved, null);
 });
+
+// ===== ステージ =====
+test('ステージ1：タンだけ・中火だけ・客1人・45秒・フィーバーや肉代なし', () => {
+  const g = YG.newGame({ seed: 3, stage: 1 });
+  assert.equal(g.stage, 1);
+  assert.equal(g.timeLeft, 45);
+  assert.deepEqual(g.R.types, ['tan']);
+  assert.ok(g.R.fires.every((f) => f === 1));
+  assert.deepEqual(g.seats.map((s) => s.state), ['empty', 'closed', 'closed']);
+  assert.equal(YG.place(g, 'kalbi', 0), null, 'カルビはまだ置けない');
+  const id = YG.place(g, 'tan', 0);
+  assert.ok(id);
+  // 最後まで回しても、準備中の席に客は来ない・注文はタンのほどよくだけ
+  const orders = new Set();
+  for (let i = 0; i < 45 * 60 + 10; i++) { YG.step(g, 1 / 60); g.seats.forEach((s) => { if (s.state === 'wait') orders.add((s.cust.order.type || '') + ':' + s.cust.order.target); }); }
+  assert.equal(g.state, 'over');
+  assert.deepEqual(g.seats.slice(1).map((s) => s.state), ['closed', 'closed']);
+  assert.deepEqual([...orders], ['tan:hodo']);
+  assert.equal(g.fevers, 0);
+  assert.equal(g.leftoverCost, 0, '肉代はステージ6から');
+});
+
+test('★は点で決まる（ステージの stars）・本番は0', () => {
+  const g = YG.newGame({ seed: 1, stage: 2 });
+  const [a, b, c] = YG.STAGES[1].stars;
+  g.score = a - 1; assert.equal(YG.starsOf(g), 0);
+  g.score = a; assert.equal(YG.starsOf(g), 1);
+  g.score = b; assert.equal(YG.starsOf(g), 2);
+  g.score = c + 100; assert.equal(YG.starsOf(g), 3);
+  const f = YG.newGame({ seed: 1 });
+  f.score = 99999; assert.equal(YG.starsOf(f), 0);
+  assert.equal(f.stage, 0);
+});
+
+test('ステージ7と本番は、同じ決まり（審査員・ラストオーダー・肉代あり）', () => {
+  const s7 = YG.ruleOf(7), free = YG.ruleOf(0);
+  assert.deepEqual(s7, free);
+  assert.ok(free.vip && free.lastOrder && free.meatCost && free.fever && free.busy);
+  assert.equal(free.duration, YG.CFG.duration);
+});
+
+test('ステージ1〜5は、にぎわいの点が付かない', () => {
+  for (const k of [1, 2, 3, 4, 5]) assert.equal(YG.ruleOf(k).busy, false, 'ステージ' + k);
+  assert.equal(YG.ruleOf(6).busy, true);
+});

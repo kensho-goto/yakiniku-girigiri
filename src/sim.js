@@ -72,6 +72,55 @@
   const TARGET_KEYS = ['usu', 'hodo', 'kon'];
   const TARGET_NAME = { usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり' };
   const RANKS = ['perfect', 'great', 'good', 'meh', 'miss'];
+
+  // ===== ステージ：1つずつ覚えることを足していく =====
+  // rule にないものは本番（FULL）と同じ。stars は ★1・★2・★3 の点（自動の遊び手で決めた。tools/bot.js --stages）
+  const MID = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
+  const FULL = {
+    duration: CFG.duration, seats: 3, types: TYPE_KEYS.slice(), targets: TARGET_KEYS.slice(), anyRate: CFG.anyTypeRate,
+    fires: CFG.fires.slice(), fever: true, busy: true, vip: true, lastOrder: true, meatCost: true, coolMul: 1,
+    patience: [CFG.patienceStart, CFG.patienceEnd], firstArrivals: CFG.firstArrivals.slice(),
+  };
+  const STAGES = [
+    { name: '屋台', learn: '置く → 返す → 皿 → 客',
+      intro: ['トレーのタンを、網へドラッグ', '肉汁が浮いたら、タップで裏返す', '両面が焼けたら、皿へ。そして客へ'],
+      rule: { duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
+      stars: [60, 250, 450] },
+    { name: '裏を読む', learn: '肉汁と煙で、見えない裏を読む',
+      intro: ['上から見えるのは、上の面だけ', '肉汁が浮いたら、下が焼けた合図', '煙が出たら、下が焦げはじめた合図'],
+      rule: { duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
+      stars: [80, 330, 950] },
+    { name: '好みを聞く', learn: 'うす焼き・ほどよく・こんがり',
+      intro: ['客ごとに、好みの焼き加減がちがう', '吹き出しの焼き色の見本に合わせる', '少し焼きすぎた肉は、こんがり派へ'],
+      rule: { duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
+      stars: [100, 250, 500] },
+    { name: '火を使い分ける', learn: '中火・強火・弱火',
+      intro: ['列ごとに、火の強さがちがう（上の札）', '強火は速いが、焦げやすい', '焦げそうなら、弱火へドラッグで逃がす'],
+      rule: { duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
+      stars: [100, 250, 500] },
+    { name: '余熱を読む', learn: '上げたあとも焼ける',
+      intro: ['皿へ上げても、しばらく焼ける（余熱）', '厚いハラミ・強火から上げた肉ほど、よく進む', 'ねらいより少し手前で上げる'],
+      rule: { duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
+      stars: [100, 380, 700] },
+    { name: '満席', learn: 'たくさん焼く・フィーバー・肉代',
+      intro: ['同時にたくさん焼くほど、点が増える', 'うまい以上を続けると、フィーバー（点が2倍）', '捨てた肉・残した肉は、肉代を引かれる'],
+      rule: { vip: false },
+      stars: [120, 600, 1400] },
+    { name: '審査員', learn: '特上カルビで3倍',
+      intro: ['審査員が来たら、特上カルビが焼ける', '好みどおりに出すと、点が3倍', '残り15秒は、ラストオーダー'],
+      rule: {},
+      stars: [150, 800, 1600] },
+  ];
+  // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
+  function ruleOf(stage) {
+    const st = STAGES[stage - 1];
+    return Object.assign({}, FULL, st ? st.rule : {});
+  }
+  function starsOf(g) {
+    const st = STAGES[g.stage - 1];
+    if (!st) return 0;
+    return st.stars.filter((v) => g.score >= v).length;
+  }
   const CHARS = 6; // ふつうの客の種類の数（見た目とセリフは lines.js / draw.js）
   const VIP_CHAR = 6; // 審査員
 
@@ -84,24 +133,29 @@
     };
   }
 
-  function strongAt(slot) { return CFG.fires[slot] >= 1.5; }
-  function fireName(slot) { const f = CFG.fires[slot]; return f >= 1.5 ? 'strong' : f >= 0.8 ? 'mid' : 'weak'; }
+  function strongAt(g, slot) { return g.R.fires[slot] >= 1.5; }
+  // fires を渡さないときは本番の火力
+  function fireName(slot, fires) { const f = (fires || CFG.fires)[slot]; return f >= 1.5 ? 'strong' : f >= 0.8 ? 'mid' : 'weak'; }
 
   function newGame(opts) {
     opts = opts || {};
     const seed = opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff);
+    const stage = opts.stage > 0 && opts.stage <= STAGES.length ? opts.stage : 0;
+    const R = ruleOf(stage);
     const g = {
+      stage, R,
       seed,
       rng: mulberry32(seed),
       state: 'ready', // ready（最初の1枚を置くまで時間は進まない）→ play → over
       paused: false,
       t: 0, // スタートからの秒
-      timeLeft: CFG.duration,
+      timeLeft: R.duration,
       grill: new Array(6).fill(null), // 肉の id
       plates: new Array(CFG.plates).fill(null),
       meats: {},
       nextId: 1,
-      seats: [0, 1, 2].map((i) => ({ state: 'empty', cust: null, nextIn: CFG.firstArrivals[i], react: null, timer: 0 })),
+      // 使わない席は「準備中」（closed）
+      seats: [0, 1, 2].map((i) => ({ state: i < R.seats ? 'empty' : 'closed', cust: null, nextIn: R.firstArrivals[i] != null ? R.firstArrivals[i] : 6 + i * 8, react: null, timer: 0 })),
       score: 0,
       combo: 0,
       maxCombo: 0,
@@ -137,6 +191,7 @@
   function place(g, type, slot) {
     if (!canAct(g) || !TYPES[type] || slot < 0 || slot > 5 || g.grill[slot]) return null;
     if (TYPES[type].special) { if (g.toku <= 0) return null; g.toku--; }
+    else if (!g.R.types.includes(type)) return null; // このステージではまだ使えない肉
     const id = g.nextId++;
     const m = {
       id, type,
@@ -211,7 +266,7 @@
     detach(g, m);
     m.loc = 'gone';
     g.stats.discard++;
-    const cost = Math.min(g.score, CFG.meatCost);
+    const cost = g.R.meatCost ? Math.min(g.score, CFG.meatCost) : 0;
     g.score -= cost;
     g.wasteCost = (g.wasteCost || 0) + cost;
     emit(g, 'discard', { id, burnt: Math.max(m.side[0], m.side[1]) >= CFG.burnt, cost });
@@ -247,12 +302,12 @@
     const fever = g.feverLeft > 0;
     let pts = 0;
     if (r.base > 0) {
-      const mult = (1 + CFG.comboStep * Math.min(comboBefore, CFG.comboCap)) * (1 + CFG.busyStep * busyAvg) * (fever ? CFG.feverMult : 1) * (vip ? CFG.vipMult : 1);
+      const mult = (1 + CFG.comboStep * Math.min(comboBefore, CFG.comboCap)) * (g.R.busy ? 1 + CFG.busyStep * busyAvg : 1) * (fever ? CFG.feverMult : 1) * (vip ? CFG.vipMult : 1);
       pts = Math.round(r.base * mult) + (r.rank === 'perfect' ? CFG.perfectBonus : 0);
     }
     if (r.rank === 'perfect' || r.rank === 'great') g.combo++;
     if (CFG.feverGain[r.rank] && !r.fail) {
-      g.feverGauge += CFG.feverGain[r.rank];
+      if (g.R.fever) g.feverGauge += CFG.feverGain[r.rank];
       if (g.feverGauge >= CFG.feverNeed) {
         g.feverGauge = 0;
         if (g.feverLeft <= 0) { g.fevers++; emit(g, 'fever'); } else emit(g, 'feverMore');
@@ -383,19 +438,19 @@
     if (g.paused || g.state === 'over') return;
     if (g.state === 'ready') return; // 最初の1枚を置くまで、焼け具合も客も止まっている
     g.t += dt;
-    g.timeLeft = Math.max(0, CFG.duration - g.t);
+    g.timeLeft = Math.max(0, g.R.duration - g.t);
     const busy = activeCount(g);
     if (g.feverLeft > 0) { g.feverLeft = Math.max(0, g.feverLeft - dt); if (g.feverLeft === 0) emit(g, 'feverEnd', { broken: false }); }
-    if (!g.lastOrder && g.timeLeft <= CFG.lastOrder) { g.lastOrder = true; emit(g, 'lastOrder'); }
-    if (g.vipIdx < CFG.vipTimes.length && g.t >= CFG.vipTimes[g.vipIdx]) { g.vipIdx++; g.vipPending = true; }
+    if (g.R.lastOrder && !g.lastOrder && g.timeLeft <= CFG.lastOrder) { g.lastOrder = true; emit(g, 'lastOrder'); }
+    if (g.R.vip && g.vipIdx < CFG.vipTimes.length && g.t >= CFG.vipTimes[g.vipIdx]) { g.vipIdx++; g.vipPending = true; }
     // 網の上
     for (let s = 0; s < 6; s++) {
       const id = g.grill[s];
       if (!id) continue;
       const m = g.meats[id];
       const T = TYPES[m.type];
-      const f = CFG.fires[s];
-      const eff = f * (strongAt(s) ? T.strongBoost : 1);
+      const f = g.R.fires[s];
+      const eff = f * (strongAt(g, s) ? T.strongBoost : 1);
       const r = T.rate * eff;
       const bottom = 1 - m.up;
       const wasBurnt = m.side[bottom] >= CFG.burnt;
@@ -406,8 +461,8 @@
       m.cookTime += dt;
       m.busyInt += (busy - (isActive(g, m) ? 1 : 0)) * dt;
       if (!wasBurnt && m.side[bottom] >= CFG.burnt) {
-        m.burnedOnStrong = m.burnedOnStrong || strongAt(s);
-        m.burnedAt = fireName(s);
+        m.burnedOnStrong = m.burnedOnStrong || strongAt(g, s);
+        m.burnedAt = fireName(s, g.R.fires);
         emit(g, 'burning', { id, slot: s });
       }
     }
@@ -429,10 +484,10 @@
         if (m.rest.t >= R) {
           m.restDone = true;
           emit(g, 'rested', { id, plate: p });
-          if (left > 0) m.warm = Math.max(0, m.warm - left / T.cool);
+          if (left > 0) m.warm = Math.max(0, m.warm - left / (T.cool * g.R.coolMul));
         }
       } else {
-        m.warm = Math.max(0, m.warm - dt / T.cool);
+        m.warm = Math.max(0, m.warm - dt / (T.cool * g.R.coolMul));
       }
       // 出す予定の客がいれば、余熱が終わったところで出す
       if (m.reserved && m.restDone) {
@@ -442,8 +497,9 @@
       }
     }
     // 客
-    const progress = Math.min(1, g.t / CFG.duration);
+    const progress = Math.min(1, g.t / g.R.duration);
     g.seats.forEach((seat, i) => {
+      if (seat.state === 'closed') return; // このステージでは使わない席
       if (seat.state === 'empty') {
         seat.nextIn -= dt;
         if (g.vipPending && g.timeLeft > 8 && !g.seats.some((o) => o.state === 'wait' && o.cust.vip)) { spawnVip(g, i); }
@@ -469,26 +525,27 @@
         }
       }
     });
-    if (g.t >= CFG.duration) end(g);
+    if (g.t >= g.R.duration) end(g);
   }
 
   function spawn(g, i, progress) {
     const seat = g.seats[i];
     const n = g.custCount++;
     let order;
-    if (g.tutorial && n === 0) order = { type: 'kalbi', target: 'hodo' };
+    const R = g.R;
+    if (g.tutorial && n === 0) order = { type: R.types.includes('kalbi') ? 'kalbi' : R.types[0], target: R.targets.includes('hodo') ? 'hodo' : R.targets[0] };
     else {
-      const anyRate = progress < 0.15 ? 0.4 : CFG.anyTypeRate;
+      const anyRate = R.anyRate > 0 && progress < 0.15 ? Math.max(0.4, R.anyRate) : R.anyRate;
       // となりの客と同じ注文にならないように引き直す
       for (let k = 0; k < 6; k++) {
         order = {
-          type: g.rng() < anyRate ? null : TYPE_KEYS[Math.floor(g.rng() * 3)],
-          target: TARGET_KEYS[Math.floor(g.rng() * 3)],
+          type: g.rng() < anyRate ? null : R.types[Math.floor(g.rng() * R.types.length)],
+          target: R.targets[Math.floor(g.rng() * R.targets.length)],
         };
         if (!g.seats.some((o) => o.state === 'wait' && o.cust.order.type === order.type && o.cust.order.target === order.target)) break;
       }
     }
-    const patience = (CFG.patienceStart + (CFG.patienceEnd - CFG.patienceStart) * progress) * (g.tutorial && n === 0 ? 1.6 : 1);
+    const patience = (R.patience[0] + (R.patience[1] - R.patience[0]) * progress) * (g.tutorial && n === 0 ? 1.6 : 1);
     seat.cust = { char: Math.floor(g.rng() * CHARS), order, patience, maxPatience: patience, n };
     seat.state = 'wait';
     emit(g, 'arrive', { seat: i });
@@ -526,7 +583,7 @@
     g.feverLeft = 0;
     g.leftover = onGrillCount(g) + g.plates.filter((x) => x != null).length;
     g.stats.leftover = g.leftover;
-    g.leftoverCost = Math.min(g.score, g.leftover * CFG.meatCost);
+    g.leftoverCost = g.R.meatCost ? Math.min(g.score, g.leftover * CFG.meatCost) : 0;
     g.score -= g.leftoverCost;
     emit(g, 'end', { leftoverCost: g.leftoverCost });
   }
@@ -569,7 +626,7 @@
     return { name: '見習いトング', why: g.score + '点' };
   }
 
-  const YG = { CFG, TYPES, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);
