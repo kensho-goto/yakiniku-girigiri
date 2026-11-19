@@ -517,18 +517,36 @@ test('店のレベル：うまく焼けた枚数の合計で上がる', () => {
   assert.equal(YG.levelOf(999), YG.LV_EXP.length);
   assert.equal(YG.LV_EXP.length - 1, YG.TOOL_KEYS.length * 3, '最高レベルで全部の道具が3段になる');
 });
-test('炭：強くすると速く焼ける', () => {
-  const side = (tools) => { const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g); const id = YG.place(g, 'kalbi', 1); run(g, 2); return g.meats[id].side[1]; };
+test('炭：焼き始めだけ速い（焼き上がりのころは同じ速さ）', () => {
+  const g0 = (tools) => { const g = YG.newGame({ seed: 1, stage: 4, tools }); freezeCustomers(g); return g; };
+  const side = (tools) => { const g = g0(tools); const id = YG.place(g, 'kalbi', 1); run(g, 2); return g.meats[id].side[1]; };
   assert.ok(side({ sumi: 3 }) > side({}) * 1.25);
+  // 焼き上がりのころ（0.5 を越えたあと）の進みは同じ
+  const late = (tools) => { const g = g0(tools); const id = YG.place(g, 'kalbi', 1); const m = g.meats[id]; m.side[1] = 0.7; m.fireHeat = 1; const a = m.side[1]; YG.step(g, 0.5); return m.side[1] - a; };
+  assert.ok(Math.abs(late({ sumi: 3 }) - late({})) < 1e-9);
+});
+test('本番は道具なし（腕だけの勝負）。店の格は見た目のために残る', () => {
+  const tools = { sumi: 3, ami: 3, sara: 3, tong: 3 };
+  const g = YG.newGame({ seed: 1, tools });
+  assert.equal(g.up.speed, 1); assert.equal(g.up.over, 1); assert.equal(g.up.rest, 1); assert.equal(g.up.hanjo, 1); assert.equal(g.up.lv.tong, 0);
+  assert.equal(g.shopSteps, 12);
+  const s = YG.newGame({ seed: 1, stage: 3, tools });
+  assert.equal(s.up.speed, YG.TOOLS.sumi.speed[3]); assert.equal(s.up.lv.tong, 3);
+});
+test('繁盛：道具が強いほどステージの客が早く来る', () => {
+  assert.equal(YG.toolUp({}).hanjo, 1);
+  assert.ok(Math.abs(YG.toolUp({ sumi: 3, ami: 3, sara: 3, tong: 3 }).hanjo - 0.7) < 1e-9);
+  const gap = (tools) => { const g = YG.newGame({ seed: 5, stage: 1, tools }); g.state = 'play'; const seat = g.seats[0]; seat.state = 'react'; seat.cust = { order: {} }; seat.timer = 0.001; YG.step(g, 1 / 60); return seat.nextIn; };
+  assert.ok(Math.abs(gap({ sumi: 3, ami: 3, sara: 3, tong: 3 }) / gap({}) - 0.7) < 1e-6);
 });
 test('網：焼けすぎてからの進みが遅い（ちょうどまでは同じ）', () => {
-  const side = (tools, sec) => { const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g); const id = YG.place(g, 'kalbi', 1); run(g, sec); return g.meats[id].side[1]; };
+  const side = (tools, sec) => { const g = YG.newGame({ seed: 1, stage: 4, tools }); freezeCustomers(g); const id = YG.place(g, 'kalbi', 1); run(g, sec); return g.meats[id].side[1]; };
   assert.ok(Math.abs(side({ ami: 3 }, 2) - side({}, 2)) < 1e-9);
   assert.ok(side({ ami: 3 }, 12) < side({}, 12) - 0.2);
 });
 test('皿：余熱の待ちが短い・焼ける量は同じ', () => {
   const carry = (tools) => {
-    const g = YG.newGame({ seed: 1, tools }); freezeCustomers(g);
+    const g = YG.newGame({ seed: 1, stage: 5, tools }); freezeCustomers(g);
     const id = YG.place(g, 'harami', 1); run(g, 4);
     const m = g.meats[id]; YG.toPlate(g, id, 0); const at = m.side[1];
     run(g, 0.5); const done = m.restDone; run(g, 4);
@@ -537,4 +555,13 @@ test('皿：余熱の待ちが短い・焼ける量は同じ', () => {
   const a = carry({}), b = carry({ sara: 3 });
   assert.ok(!a.done && b.done, '職人の皿は0.5秒で余熱が終わる');
   assert.ok(Math.abs(a.amt - b.amt) < 0.01);
+});
+test('★の目標：★1・★2 は決まった数、★3 だけ道具ぶん上がる', () => {
+  const base = YG.STAGES[1].stars;
+  assert.deepEqual(YG.starNeed(2, 0), base);
+  assert.deepEqual(YG.starNeed(2, 12), [base[0], base[1], base[2] + 3]);
+  assert.equal(YG.starNeed(0, 5), null);
+  const g = YG.newGame({ seed: 1, stage: 2, tools: { sumi: 3, ami: 3, sara: 3, tong: 3 } });
+  g.stats.ok = base[2]; assert.equal(YG.starsOf(g), 2, '道具が最高なら、元の★3の枚数では★2');
+  g.stats.ok = base[2] + 3; assert.equal(YG.starsOf(g), 3);
 });

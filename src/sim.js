@@ -31,6 +31,9 @@
     patienceEnd: 18, // 終わりごろの客の待てる秒数
     firstArrivals: [0, 6, 14], // 3つの席に最初の客が来る時刻（スタートからの秒）
     arriveGap: [2, 4], // 客が帰ってから次が来るまで（本番。ステージでは長め）
+    sumiUntil: 0.5, // 炭が速くするのは、焼け具合がここまでの間だけ
+    star3PerStep: 0.25, // ★3 に要る枚数が、道具1段ごとに増える量（12段で +3 枚）
+    hanjoPerStep: 0.025, // 繁盛：道具を1段強くするごとに、ステージの客の来る間が縮む割合（12段で 0.7 倍）
     anyTypeRate: 0.3, // 「どの肉でも」の注文の割合
     anyTypeMult: 0.8, // 「どの肉でも」の客は点がひかえめ（合う肉を頼んだ客に出すほうが得）
     reactTime: 1.6, // 客が反応している秒数（このあいだも他の操作はできる）
@@ -116,16 +119,18 @@
   // うまく焼けた枚数の合計が「店の経験」。レベルが1つ上がるごとに、道具を1つ強くできる（各3段）
   const LV_EXP = [0, 5, 12, 20, 30, 42, 56, 72, 90, 110, 132, 156, 182]; // Lv1〜Lv13 に要る経験
   const TOOLS = {
-    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼ける速さ +10%', '焼ける速さ +20%', '焼ける速さ +30%'], speed: [1, 1.1, 1.2, 1.3] },
+    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼き始めが +20% 速い', '焼き始めが +40% 速い', '焼き始めが +60% 速い'], speed: [1, 1.2, 1.4, 1.6] },
     ami: { name: '網', icon: '🥩', lvName: ['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], effect: ['', '焼けすぎてからの進み −15%', '焼けすぎてからの進み −30%', '焼けすぎてからの進み −45%'], over: [1, 0.85, 0.7, 0.55] },
-    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱の待ちが1/4・冷めにくい', '余熱が一瞬・もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
+    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱の待ち1/4・冷めにくい', '余熱が一瞬・もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
     tong: { name: 'トング', icon: '🥢', lvName: ['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], effect: ['', '返しどきに肉がピョンと跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'] },
   };
   const TOOL_KEYS = Object.keys(TOOLS);
   function levelOf(exp) { let lv = 1; LV_EXP.forEach((v, i) => { if (exp >= v) lv = i + 1; }); return lv; }
   function toolUp(tools) {
     const t = {}; TOOL_KEYS.forEach((k) => { t[k] = Math.max(0, Math.min(3, (tools && tools[k]) | 0)); });
-    return { lv: t, speed: TOOLS.sumi.speed[t.sumi], over: TOOLS.ami.over[t.ami], rest: TOOLS.sara.rest[t.sara], cool: TOOLS.sara.cool[t.sara] };
+    const steps = TOOL_KEYS.reduce((a, k) => a + t[k], 0);
+    // 繁盛：道具が強い店ほど客が早く来る（楽になった分の半分くらいを忙しさで返す）
+    return { lv: t, steps, speed: TOOLS.sumi.speed[t.sumi], over: TOOLS.ami.over[t.ami], rest: TOOLS.sara.rest[t.sara], cool: TOOLS.sara.cool[t.sara], hanjo: 1 - CFG.hanjoPerStep * steps };
   }
 
   // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
@@ -133,10 +138,17 @@
     const st = STAGES[stage - 1];
     return Object.assign({}, FULL, st ? st.rule : {});
   }
+  // ★に要る枚数。★1・★2 は決まった数（道具で楽に届く＝行き詰まった人の助け）。
+  // ★3 は道具を強くした段の数だけ上がる（★3 は腕の勝負のまま。4段で +1 枚）
+  function starNeed(stage, steps) {
+    const st = STAGES[stage - 1];
+    if (!st) return null;
+    return [st.stars[0], st.stars[1], st.stars[2] + Math.round((steps || 0) * CFG.star3PerStep)];
+  }
   function starsOf(g) {
-    const st = STAGES[g.stage - 1];
-    if (!st) return 0;
-    return st.stars.filter((v) => g.stats.ok >= v).length;
+    const need = starNeed(g.stage, g.up.steps);
+    if (!need) return 0;
+    return need.filter((v) => g.stats.ok >= v).length;
   }
   // うまく焼けた枚数：頼んだ肉を「ふつう」以上で出した枚数（ステージの目標と★はこれで決まる）
   function goodRank(r) { return !r.fail && !r.wrongType && (r.rank === 'perfect' || r.rank === 'great' || r.rank === 'good'); }
@@ -163,7 +175,8 @@
     const R = ruleOf(stage);
     const g = {
       stage, R,
-      up: toolUp(opts.tools), // 道具（店のレベルで強くしたもの）
+      up: toolUp(stage ? opts.tools : null), // 道具（店のレベルで強くしたもの）。本番は道具なし＝腕だけの勝負
+      shopSteps: toolUp(opts.tools).steps, // 店の格（見た目だけ。本番でも七輪の枠の色に出す）
       seed,
       rng: mulberry32(seed),
       state: 'ready', // ready（最初の1枚を置くまで時間は進まない）→ play → over
@@ -472,12 +485,15 @@
       const T = TYPES[m.type];
       const f = g.R.fires[s];
       const eff = f * (strongAt(g, s) ? T.strongBoost : 1);
-      const r = T.rate * eff * g.up.speed; // 炭：焼ける速さ
+      const r = T.rate * eff;
       const bottom = 1 - m.up;
       const wasBurnt = m.side[bottom] >= CFG.burnt;
-      const ov = (v) => (v > 1 ? g.up.over : 1); // 網：焼けすぎてからの進みが遅い
-      m.side[bottom] += r * dt * ov(m.side[bottom]);
-      m.side[m.up] += r * T.through * dt * ov(m.side[m.up]);
+      // 炭：焼き始め（sumiUntil まで）だけ速い。焼き上がりのころは ふつうの速さ＝ちょうどいい時間の幅は変わらない
+      // （全部速くすると、ゆっくりの人ほど焼きすぎる。自動の遊び手で、初心者の枚数が半分以下に落ちた）
+      // 網：焼けすぎてからの進みが遅い
+      const mul = (v) => (v < CFG.sumiUntil ? g.up.speed : v > 1 ? g.up.over : 1);
+      m.side[bottom] += r * dt * mul(m.side[bottom]);
+      m.side[m.up] += r * T.through * dt * mul(m.side[m.up]);
       m.fireHeat += (f - m.fireHeat) * (1 - Math.exp(-dt / CFG.fireTau));
       m.warm += (1 - m.warm) * (1 - Math.exp(-dt / CFG.warmTau));
       m.cookTime += dt;
@@ -543,7 +559,7 @@
           seat.state = 'empty';
           seat.cust = null; seat.react = null;
           const [a, b] = g.lastOrder ? CFG.lastArriveGap : g.R.arriveGap;
-          seat.nextIn = (a + g.rng() * (b - a)) * (g.feverLeft > 0 && !g.lastOrder ? CFG.feverArriveMul : 1);
+          seat.nextIn = (a + g.rng() * (b - a)) * (g.feverLeft > 0 && !g.lastOrder ? CFG.feverArriveMul : 1) * (g.lastOrder ? 1 : g.up.hanjo);
         }
       }
     });
@@ -648,7 +664,7 @@
     return { name: '見習いトング', why: g.score + '点' };
   }
 
-  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, starNeed, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);
