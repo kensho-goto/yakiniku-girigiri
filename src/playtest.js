@@ -36,7 +36,7 @@
   }
   // 次の人に渡す：名前・自己ベスト・説明済み・感想済みを消して、はじめから
   function nextPerson() {
-    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb'].forEach(ls.del);
+    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb', 'yaki.stars', 'yaki.seen', 'yaki.stageBest'].forEach(ls.del);
     ls.set('yaki.pid', newId());
     location.reload();
   }
@@ -44,6 +44,7 @@
   function summary(g) {
     const st = g.stats;
     return {
+      stage: g.stage || 0, stars: g.stage ? root.YG.starsOf(g) : null,
       score: g.score, t: Math.round(g.t * 10) / 10, tutorial: !!g.tutorial, fevers: g.fevers,
       served: st.served, perfect: st.perfect, great: st.great, good: st.good, meh: st.meh, miss: st.miss,
       raw: st.raw, halfraw: st.halfraw, burnt: st.burnt, char: st.char, cold: st.cold, luke: st.luke, leave: st.leave,
@@ -69,7 +70,7 @@
       input.classList.add('need'); input.placeholder = '名前を入れてね（ニックネームでOK）'; input.focus();
       return false;
     },
-    start(g) { if (!on) return; playNo++; startedAt = Date.now(); send('start', { playNo, tutorial: !!g.tutorial }); },
+    start(g) { if (!on) return; playNo++; startedAt = Date.now(); send('start', { playNo, stage: g.stage || 0, tutorial: !!g.tutorial }); },
     quit(g, why) { if (!on || !g || g.state === 'over') return; send('quit', Object.assign({ playNo, why, sec: Math.round((Date.now() - startedAt) / 1000) }, summary(g))); },
     end(g, rank, title) {
       if (!on) return;

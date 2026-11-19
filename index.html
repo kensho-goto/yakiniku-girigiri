@@ -94,6 +94,32 @@
   .pt-send:disabled { opacity: .4; }
   .pt-thanks { font-size: 15px; font-weight: bold; color: #ffd84d; padding: 6px; }
   .next b { font-family: var(--num); font-weight: 400; color: #ffd84d; font-size: 18px; }
+  /* ステージ */
+  .stage-next { margin: 12px 0 2px; font-size: 14px; color: #ffd9b0; line-height: 1.5; }
+  .stage-next b { color: #fff; font-size: 16px; }
+  .stars { color: #ffd84d; letter-spacing: 2px; }
+  .stars i { font-style: normal; color: rgba(255,255,255,.22); }
+  .slist { text-align: left; margin-top: 10px; }
+  .srow { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; padding: 9px 10px; background: #3d2417; border: 0; border-radius: 12px; color: #fff; font: inherit; text-align: left; cursor: pointer; }
+  .srow .no { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #ff9b2f; color: #3a1a00; font-family: var(--num); font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .srow .tx { flex: 1; min-width: 0; }
+  .srow .tx b { display: block; font-size: 15px; }
+  .srow .tx small { display: block; font-size: 11.5px; color: #d9b896; }
+  .srow .st { flex: none; font-size: 15px; }
+  .srow.lock { opacity: .45; cursor: default; }
+  .srow.lock .no { background: #6b4a35; color: #d9b896; }
+  .srow.cur { outline: 3px solid #ffd84d; }
+  .srow.free .no { background: #e0302a; color: #fff; font-size: 12px; }
+  .intro-no { font-size: 14px; color: #ffd9b0; letter-spacing: .1em; }
+  .intro-list { text-align: left; margin: 14px 0 6px; padding: 0; list-style: none; }
+  .intro-list li { background: #3d2417; border-radius: 10px; padding: 9px 12px; margin-top: 6px; font-size: 15px; line-height: 1.45; }
+  .intro-list li::before { content: '🔥 '; }
+  .goal { font-size: 13px; color: #ffd9b0; margin-top: 8px; }
+  .goal b { font-family: var(--num); font-weight: 400; color: #ffd84d; }
+  .rank.r-stage { min-width: 170px; color: #3a1a00; border-color: #fff3b0; background: linear-gradient(#fff3a0, #ffb32f); }
+  .rank.r-stage .rk { font-size: 40px; letter-spacing: 4px; }
+  .rank.r-stage .rk i { font-style: normal; color: rgba(90,50,10,.3); }
+  .rank.r-stage0 { color: #ccc; border-color: #888; background: #3a3a3a; }
 </style>
 </head>
 <body>
@@ -104,11 +130,30 @@
   <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
   <div class="card">
     <p class="sub" style="margin-top:0">焼いて、返して、余熱を読む。</p>
-    <div class="flow"><span>置く</span><i>→</i><span>タップで返す</span><i>→</i><span>皿へ</span><i>→</i><span>客へ</span></div>
+    <div class="stage-next" id="titleStage"></div>
     <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
     <button class="btn" id="startBtn">焼く</button>
     <div class="best" id="titleBest"></div>
+    <button class="tiny" id="stageBtn">ステージをえらぶ・本番へとばす</button>
     <button class="tiny" id="ptNextTitle" hidden>次の人に渡す（記録を消して、はじめから）</button>
+  </div>
+</div>
+
+<div class="overlay dim" id="stages" hidden>
+  <div class="card">
+    <h1 class="logo" style="font-size:32px">ステージ</h1>
+    <div class="slist" id="stageList"></div>
+    <button class="btn2" id="stagesClose">もどる</button>
+  </div>
+</div>
+
+<div class="overlay dim" id="intro" hidden>
+  <div class="card">
+    <div class="intro-no" id="introNo"></div>
+    <h1 class="logo" style="font-size:36px" id="introName"></h1>
+    <ul class="intro-list" id="introList"></ul>
+    <div class="goal" id="introGoal"></div>
+    <button class="btn" id="introGo">はじめる</button>
   </div>
 </div>
 
@@ -132,6 +177,8 @@
     <div class="best" id="rBest" style="margin-top:2px"></div>
     <div class="lessons" id="rLessons"></div>
     <button class="btn" id="againBtn">もう一回</button>
+    <button class="btn2" id="rRetry" hidden>もう一回</button>
+    <button class="btn2" id="rStages" hidden>ステージをえらぶ</button>
     <div class="pt" id="ptFeedback" hidden></div>
     <div class="title">今日の称号<b id="rTitle"></b><span id="rWhy"></span></div>
     <div class="stats" id="rStats"></div>
