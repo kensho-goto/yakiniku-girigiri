@@ -126,14 +126,14 @@ const server = http.createServer((req, res) => {
 
 // ===== 配る QR の画面（URL が変わったら描き直す） =====
 function qrPage() {
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>焼肉ギリギリ 試遊会</title>
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>ジュー 試遊会</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>body{margin:0;background:#2a1a14;color:#fff;font-family:'Hiragino Sans',sans-serif;text-align:center;padding:24px}
 h1{color:#ffd84d;font-size:40px;margin:8px 0}#qr{display:inline-block;background:#fff;padding:18px;border-radius:16px;margin:16px 0;min-width:320px;min-height:320px}
 .url{font-size:18px;word-break:break-all;color:#ffd9b0}.sub{font-size:13px;color:#b89a88;margin-top:6px;word-break:break-all}.fixed{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:99px;background:#3d6b2a;font-size:14px}.wait{font-size:20px;color:#ffb3a0;min-height:1.4em}ol{display:inline-block;text-align:left;font-size:18px;line-height:1.8}
 a{color:#ffd84d}</style></head><body>
-<h1>焼肉ギリギリ 試遊会</h1>
+<h1>ジュー 試遊会</h1>
 <div id="wait" class="wait">URL を作っています…（10秒ほど）</div>
 <div id="qr"></div><div class="url" id="url"></div><div class="sub" id="sub"></div>
 <ol><li>スマホのカメラで QR を読む</li><li>名前（ニックネーム）を入れて「焼く」</li><li>終わったら「どうだった？」を押して送る</li><li>スマホを次の人に回すときは「次の人に渡す」</li></ol>
@@ -260,7 +260,7 @@ h1{color:#ffd84d;margin:0 0 4px}h2{color:#ffd9b0;font-size:18px;margin:26px 0 8p
 table{width:100%;border-collapse:collapse;background:#2d1b12;border-radius:12px;overflow:hidden}td,th{padding:8px 10px;border-bottom:1px solid #3d2417;text-align:left;font-size:14px}th{color:#ffd9b0;font-weight:normal}
 ul{list-style:none;padding:0;margin:0}li{background:#2d1b12;border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:15px}.f{white-space:nowrap}
 .bar{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0}.bar i{display:block;height:14px;background:#ff7a2f;border-radius:7px}</style></head><body>
-<h1>焼肉ギリギリ 試遊会の集計</h1><div class="note">10秒ごとに新しくなります。記録はこの Mac の playtest-data/log.jsonl にだけあります。</div>
+<h1>ジュー 試遊会の集計</h1><div class="note">10秒ごとに新しくなります。記録はこの Mac の playtest-data/log.jsonl にだけあります。</div>
 <h2>ひと目で</h2><div class="cards">
 ${card(ps.length, '遊んだ人')}
 ${card(done, '最後まで遊んだ回数', `やり直し ${quitN}回・離れたまま ${gone.length}回`)}

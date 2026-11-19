@@ -1,6 +1,6 @@
 {
-  "name": "焼肉ギリギリ",
-  "short_name": "焼肉ギリギリ",
+  "name": "ジュー（焼肉）",
+  "short_name": "ジュー",
   "description": "焼き加減を見きわめる、スマホのクソゲー",
   "start_url": "./",
   "display": "standalone",

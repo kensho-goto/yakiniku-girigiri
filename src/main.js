@@ -1,4 +1,4 @@
-// 焼肉ギリギリ：画面の流れ・操作・演出。ゲームの中身は sim.js（YG）にある
+// ジュー：画面の流れ・操作・演出。ゲームの中身は sim.js（YG）にある
 (function () {
   'use strict';
   const { L, W, H } = YD;
