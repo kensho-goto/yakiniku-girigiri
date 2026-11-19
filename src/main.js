@@ -43,6 +43,8 @@
     const safeTop = (document.getElementById('safe') || {}).offsetHeight || 0;
     ox = (cw - W * scale) / 2; oy = Math.max(0, Math.min(ch - H * scale, safeTop));
     ext = { x0: -ox / scale, x1: (cw - ox) / scale, y0: -oy / scale, y1: (ch - oy) / scale };
+    const tf = document.getElementById('titleFrame');
+    if (tf) tf.style.transform = `translate(${ox}px, ${oy}px) scale(${scale})`;
     checkRotate();
   }
   // 横向きのスマホ：「縦にしてね」を出して止める（パソコンでは出さない）
@@ -171,7 +173,7 @@
     const k = nextStage();
     const sm = starsMap();
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
-    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b><br>${YG.STAGES[k - 1].learn}` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? '<b>上級者：本番から</b><br>ランクで勝負。自己ベストをねらう' : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう');
+    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b>` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? '<b>上級者：本番から</b><br>ランクで勝負。自己ベストをねらう' : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう');
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
   }
   showBest();
@@ -902,6 +904,8 @@
   const demoGone = [0, 0, 0, 0, 0, 0]; // 焼き上がって消えたあと、次を置くまでの秒
   let demoLast = null;
   function renderIdle(t) {
+    for (let p = 0; p < 3; p++) YD.drawPlate(ctx, p, null, t, {}); // 皿とすてる箱も描いて、ゲーム中と同じ店にする
+    YD.drawTrash(ctx, t, {});
     YD.drawGrill(ctx, t);
     // 画面の速さに関係なく進める。焼けたら湯気とともに消して、少し待って次を置く（見本だけ）
     const dt = demoLast == null ? 0 : Math.min(0.1, t - demoLast); demoLast = t;
@@ -921,7 +925,7 @@
     for (let i = 0; i < 6; i++) { const id = demo.grill[i]; if (id) { const s = L.slot(i); YD.drawMeat(ctx, demo.meats[id], s.x, s.y, { onGrill: true, t }); } }
     for (const f of fx) { if (f.k === 'dot') { ctx.globalAlpha = 1 - f.t / f.life; ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } }
     YD.drawFireTags(ctx);
-    YD.drawTray(ctx, t, null, 0);
+    // トレーはタイトルでは描かない（カードを置く場所）
   }
 
   resize();
