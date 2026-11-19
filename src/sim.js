@@ -1,0 +1,447 @@
+// 焼肉ギリギリ：ゲームの中身（焼け方・余熱・冷め・客・採点）。
+// 画面や音には触らない。ブラウザでは window.YG、node（テスト）では require で使う。
+// 見た目と採点は、どちらもこのファイルの状態（meat.side / meat.warm など）だけを見る。
+(function (root) {
+  'use strict';
+
+  // ===== 調整する数字はここにまとめる =====
+  const CFG = {
+    duration: 75, // 1プレイの秒数
+    raw: 0.3, // これより下の面は「生」
+    burnt: 1.32, // これより上の面は「焦げ」
+    char: 1.62, // これより上の面は「炭」
+    targets: { usu: 0.55, hodo: 0.8, kon: 1.05 }, // 客の好みの焼け具合
+    tol: { perfect: 0.05, great: 0.11, good: 0.2, meh: 0.32 }, // 好みからのずれの許し幅（両面の悪い方で見る）
+    points: { perfect: 100, great: 70, good: 45, meh: 15 },
+    perfectBonus: 30, // 神焼きのおまけ
+    comboStep: 0.1, // コンボ1つで +10%
+    comboCap: 10,
+    busyStep: 0.1, // 一緒に焼いていた肉1枚で +10%（にぎわい）
+    warmLuke: 0.45, // 温かさがこれより下は「ぬるい」（1段下がる）
+    warmCold: 0.15, // これより下は「冷めた」（失敗）
+    wrongTypeMult: 0.6, // 頼んだ肉とちがう
+    // 網の6枠の火力（上の段・下の段、左から 中・強・弱）
+    fires: [1.0, 1.7, 0.5, 1.0, 1.7, 0.5],
+    fireTau: 1.2, // 肉にたまる熱が火力に追いつく速さ（秒）。余熱の大きさを決める
+    warmTau: 0.8, // 網の上で温まる速さ（秒）
+    plates: 3,
+    patienceStart: 28, // はじめの客の待てる秒数
+    patienceEnd: 18, // 終わりごろの客の待てる秒数
+    firstArrivals: [0, 6, 14], // 3つの席に最初の客が来る時刻（スタートからの秒）
+    arriveGap: [1.5, 3.5], // 客が帰ってから次が来るまで
+    anyTypeRate: 0.3, // 「肉はなんでも」の注文の割合
+    reactTime: 1.6, // 客が反応している秒数（このあいだも他の操作はできる）
+  };
+
+  // 肉の種類。rate＝下の面の焼ける速さ、through＝上の面に伝わる割合、carry＝余熱の大きさ、
+  // rest＝余熱の秒数、cool＝余熱のあと冷めきるまでの秒数、strongBoost＝強火で脂が燃える倍率
+  const TYPES = {
+    tan: { name: 'タン', rate: 0.26, through: 0.18, carry: 0.045, rest: 1.5, cool: 8, strongBoost: 1.0, thick: 3 },
+    kalbi: { name: 'カルビ', rate: 0.15, through: 0.12, carry: 0.07, rest: 2.0, cool: 10, strongBoost: 1.2, thick: 6 },
+    harami: { name: 'ハラミ', rate: 0.1, through: 0.08, carry: 0.12, rest: 2.8, cool: 12, strongBoost: 1.0, thick: 11 },
+  };
+  const TYPE_KEYS = ['tan', 'kalbi', 'harami'];
+  const TARGET_KEYS = ['usu', 'hodo', 'kon'];
+  const TARGET_NAME = { usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり' };
+  const RANKS = ['perfect', 'great', 'good', 'meh', 'miss'];
+  const CHARS = 6; // 客の種類の数（見た目とセリフは lines.js / draw.js）
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function strongAt(slot) { return CFG.fires[slot] >= 1.5; }
+  function fireName(slot) { const f = CFG.fires[slot]; return f >= 1.5 ? 'strong' : f >= 0.8 ? 'mid' : 'weak'; }
+
+  function newGame(opts) {
+    opts = opts || {};
+    const seed = opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff);
+    const g = {
+      seed,
+      rng: mulberry32(seed),
+      state: 'ready', // ready（最初の1枚を置くまで時間は進まない）→ play → over
+      paused: false,
+      t: 0, // スタートからの秒
+      timeLeft: CFG.duration,
+      grill: new Array(6).fill(null), // 肉の id
+      plates: new Array(CFG.plates).fill(null),
+      meats: {},
+      nextId: 1,
+      seats: [0, 1, 2].map((i) => ({ state: 'empty', cust: null, nextIn: CFG.firstArrivals[i], react: null, timer: 0 })),
+      score: 0,
+      combo: 0,
+      maxCombo: 0,
+      log: [], // 出した肉の記録（ふりかえり用）
+      stats: { served: 0, perfect: 0, great: 0, good: 0, meh: 0, miss: 0, raw: 0, halfraw: 0, burnt: 0, char: 0, cold: 0, luke: 0, leave: 0, wrong: 0, discard: 0, carryOver: 0, maxBusy: 0, placed: 0, burnedOnStrong: 0 },
+      events: [], // 画面・音へ知らせる出来事（main.js が取り出す）
+      tutorial: !!opts.tutorial,
+      custCount: 0,
+    };
+    return g;
+  }
+
+  function emit(g, type, data) { g.events.push(Object.assign({ type }, data || {})); }
+  function canAct(g) { return (g.state === 'ready' || g.state === 'play') && !g.paused; }
+  function onGrillCount(g) { return g.grill.reduce((n, id) => n + (id ? 1 : 0), 0); }
+
+  function start(g) {
+    if (g.state !== 'ready') return;
+    g.state = 'play';
+    emit(g, 'start');
+  }
+
+  // ===== 操作 =====
+  function place(g, type, slot) {
+    if (!canAct(g) || !TYPES[type] || slot < 0 || slot > 5 || g.grill[slot]) return null;
+    const id = g.nextId++;
+    const m = {
+      id, type,
+      side: [0, 0], // 2つの面の焼け具合（0＝生、0.8 くらい＝ほどよく、1.32〜＝焦げ）
+      up: 0, // 上を向いている面（0 か 1）。下の面＝1-up が網に当たる
+      loc: 'grill', slot, plate: -1,
+      warm: 0.3, // 温かさ（焼け具合とは別）
+      fireHeat: 0, // 肉にたまった熱。網から上げたときの余熱の大きさになる
+      rest: null, // 余熱中 { t, dur, carry:[a,b] }
+      restDone: false,
+      cookTime: 0, busyInt: 0, flips: 0,
+      atRemoval: null, // 網から上げた瞬間の両面
+      burnedOnStrong: false, burnedAt: null,
+      detail: g.rng(), // 見た目の模様（サシ・焦げ跡の位置）の種
+    };
+    g.meats[id] = m;
+    g.grill[slot] = id;
+    g.stats.placed++;
+    start(g);
+    g.stats.maxBusy = Math.max(g.stats.maxBusy, onGrillCount(g));
+    emit(g, 'place', { id, slot });
+    return id;
+  }
+
+  function flip(g, id) {
+    const m = g.meats[id];
+    if (!canAct(g) || !m || m.loc === 'gone') return false;
+    m.up = 1 - m.up;
+    m.flips++;
+    emit(g, 'flip', { id, loc: m.loc });
+    return true;
+  }
+
+  function moveToSlot(g, id, slot) {
+    const m = g.meats[id];
+    if (!canAct(g) || !m || m.loc === 'gone' || slot < 0 || slot > 5 || g.grill[slot]) return false;
+    detach(g, m);
+    m.loc = 'grill'; m.slot = slot; m.plate = -1;
+    m.rest = null; m.restDone = false;
+    g.grill[slot] = id;
+    g.stats.maxBusy = Math.max(g.stats.maxBusy, onGrillCount(g));
+    emit(g, 'move', { id, slot });
+    return true;
+  }
+
+  function toPlate(g, id, p) {
+    const m = g.meats[id];
+    if (!canAct(g) || !m || m.loc === 'gone' || p < 0 || p >= CFG.plates || g.plates[p] != null) return false;
+    const fromGrill = m.loc === 'grill';
+    detach(g, m);
+    m.loc = 'plate'; m.plate = p; m.slot = -1;
+    g.plates[p] = id;
+    if (fromGrill) {
+      // 網から上げた瞬間：たまった熱の分だけ、このあと少し焼ける（下の面ほど多く）
+      const T = TYPES[m.type];
+      const c = T.carry * m.fireHeat;
+      const carry = [0, 0];
+      carry[1 - m.up] = c;
+      carry[m.up] = c * 0.6;
+      m.rest = { t: 0, dur: T.rest, carry };
+      m.restDone = false;
+      m.atRemoval = m.side.slice();
+    }
+    emit(g, 'plate', { id, plate: p, fromGrill });
+    return true;
+  }
+
+  function discard(g, id) {
+    const m = g.meats[id];
+    if (!canAct(g) || !m || m.loc === 'gone') return false;
+    detach(g, m);
+    m.loc = 'gone';
+    g.stats.discard++;
+    emit(g, 'discard', { id, burnt: Math.max(m.side[0], m.side[1]) >= CFG.burnt });
+    return true;
+  }
+
+  function detach(g, m) {
+    if (m.loc === 'grill' && g.grill[m.slot] === m.id) g.grill[m.slot] = null;
+    if (m.loc === 'plate' && g.plates[m.plate] === m.id) g.plates[m.plate] = null;
+  }
+
+  // 出せるか（余熱が終わっていること）。食べごろかどうかとは別
+  function servable(m) { return !!m && m.loc === 'plate' && m.restDone; }
+
+  function serve(g, id, seatIdx) {
+    const m = g.meats[id];
+    const seat = g.seats[seatIdx];
+    if (!canAct(g) || g.state !== 'play') return { ok: false, why: 'state' };
+    if (!m || m.loc !== 'plate') return { ok: false, why: 'gone' };
+    if (!m.restDone) return { ok: false, why: 'resting' };
+    if (!seat || seat.state !== 'wait') return { ok: false, why: 'noone' };
+    const order = seat.cust.order;
+    const r = grade(m, order);
+    // 余熱で焼けすぎたか：上げた瞬間の両面なら、今より良い評価だった
+    if (m.atRemoval) {
+      const before = grade({ side: m.atRemoval, warm: 1, type: m.type }, order);
+      if (rankIndex(before) < rankIndex(r) && Math.max(...m.side) > Math.max(...m.atRemoval) && r.over) r.carryOver = true;
+    }
+    const comboBefore = g.combo;
+    const busyAvg = m.cookTime > 0 ? m.busyInt / m.cookTime : 0;
+    let pts = 0;
+    if (r.base > 0) {
+      const mult = (1 + CFG.comboStep * Math.min(comboBefore, CFG.comboCap)) * (1 + CFG.busyStep * busyAvg);
+      pts = Math.round(r.base * mult) + (r.rank === 'perfect' ? CFG.perfectBonus : 0);
+    }
+    if (r.rank === 'perfect' || r.rank === 'great') g.combo++;
+    else if (r.rank !== 'good') g.combo = 0;
+    g.maxCombo = Math.max(g.maxCombo, g.combo);
+    g.score += pts;
+    // 記録
+    const st = g.stats;
+    st.served++;
+    if (RANKS.includes(r.rank)) st[r.rank]++;
+    if (r.fail) st[r.fail]++;
+    if (r.luke) st.luke++;
+    if (r.wrongType) st.wrong++;
+    if (r.carryOver) st.carryOver++;
+    if (r.fail === 'burnt' || r.fail === 'char') { if (m.burnedOnStrong) st.burnedOnStrong++; }
+    detach(g, m);
+    m.loc = 'gone';
+    const entry = { id, type: m.type, side: m.side.slice(), atRemoval: m.atRemoval, warm: m.warm, order: Object.assign({}, order), char: seat.cust.char, result: r, pts, combo: g.combo, busyAvg, burnedOnStrong: m.burnedOnStrong, flips: m.flips };
+    g.log.push(entry);
+    seat.state = 'react';
+    seat.timer = CFG.reactTime;
+    seat.react = entry;
+    emit(g, 'serve', { seat: seatIdx, entry });
+    return { ok: true, entry };
+  }
+
+  // ===== 採点 =====
+  function sideClass(d) {
+    if (d >= CFG.char) return 'char';
+    if (d >= CFG.burnt) return 'burnt';
+    if (d < CFG.raw) return 'raw';
+    return 'ok';
+  }
+  function rankIndex(r) { return r.fail ? 9 : RANKS.indexOf(r.rank); }
+
+  // 両面を別々に見る。平均はとらない（片面生・片面焦げは失敗）
+  function grade(m, order) {
+    const s = m.side;
+    const cls = s.map(sideClass);
+    const T = CFG.targets[order.target];
+    const res = { rank: 'miss', base: 0, fail: null, over: false, under: false, luke: false, wrongType: false, sides: cls, worstDev: 0 };
+    if (cls.includes('char')) { res.fail = 'char'; }
+    else if (cls[0] === 'raw' && cls[1] === 'raw') { res.fail = 'raw'; }
+    else if (cls.includes('raw')) { res.fail = cls.includes('burnt') ? 'rawburnt' : 'halfraw'; }
+    else if (cls.includes('burnt')) { res.fail = 'burnt'; }
+    if (res.fail === 'rawburnt') res.fail = 'halfraw', res.alsoBurnt = true;
+    if (res.fail) { res.rank = 'fail'; return finishWarm(res, m, order); }
+    const devs = s.map((d) => d - T);
+    const worst = Math.abs(devs[0]) >= Math.abs(devs[1]) ? devs[0] : devs[1];
+    res.worstDev = worst;
+    res.over = worst > 0; res.under = worst < 0;
+    const a = Math.abs(worst);
+    const tol = CFG.tol;
+    let ri = a <= tol.perfect ? 0 : a <= tol.great ? 1 : a <= tol.good ? 2 : a <= tol.meh ? 3 : 4;
+    res.rank = RANKS[ri];
+    return finishWarm(res, m, order);
+  }
+  function finishWarm(res, m, order) {
+    // 温かさ：冷めたら失敗、ぬるいと1段下がる
+    if (m.warm < CFG.warmCold && !res.fail) { res.fail = 'cold'; res.rank = 'fail'; }
+    else if (m.warm < CFG.warmLuke && !res.fail) {
+      res.luke = true;
+      const ri = Math.min(4, RANKS.indexOf(res.rank) + 1);
+      res.rank = RANKS[ri];
+    }
+    if (order.type && order.type !== m.type) {
+      res.wrongType = true;
+      if (res.rank === 'perfect') res.rank = 'great';
+    }
+    res.base = res.fail || res.rank === 'miss' ? 0 : CFG.points[res.rank] * (res.wrongType ? CFG.wrongTypeMult : 1);
+    return res;
+  }
+
+  // 皿の上で、余熱のあとに出す短い状態表示（数字は出さない）
+  function bucket(d) {
+    if (d >= CFG.char) return 'char';
+    if (d >= CFG.burnt) return 'burnt';
+    if (d < CFG.raw) return 'raw';
+    if (d < 0.68) return 'usu';
+    if (d < 0.93) return 'hodo';
+    return 'kon';
+  }
+  const BUCKET_NAME = { raw: 'ナマ', usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり', burnt: 'コゲ', char: '炭' };
+  function label(m) {
+    const b = m.side.map(bucket);
+    if (b[0] === b[1]) return { text: BUCKET_NAME[b[0]], kind: b[0] };
+    if (b.includes('char')) return { text: '炭', kind: 'char' };
+    if (b.includes('raw')) return { text: b.includes('burnt') ? '表コゲ裏ナマ' : '片面ナマ', kind: 'raw' };
+    if (b.includes('burnt')) return { text: '片面コゲ', kind: 'burnt' };
+    const order = ['usu', 'hodo', 'kon'];
+    const i0 = order.indexOf(b[0]), i1 = order.indexOf(b[1]);
+    return { text: BUCKET_NAME[order[Math.min(i0, i1)]] + '〜' + BUCKET_NAME[order[Math.max(i0, i1)]], kind: 'mix' };
+  }
+
+  // ===== 時間を進める（main.js は 1/60 秒ずつ呼ぶ。dt を変えても結果がほぼ同じになるように書く） =====
+  function step(g, dt) {
+    if (g.paused || g.state === 'over') return;
+    if (g.state === 'ready') return; // 最初の1枚を置くまで、焼け具合も客も止まっている
+    g.t += dt;
+    g.timeLeft = Math.max(0, CFG.duration - g.t);
+    const busy = onGrillCount(g);
+    // 網の上
+    for (let s = 0; s < 6; s++) {
+      const id = g.grill[s];
+      if (!id) continue;
+      const m = g.meats[id];
+      const T = TYPES[m.type];
+      const f = CFG.fires[s];
+      const eff = f * (strongAt(s) ? T.strongBoost : 1);
+      const r = T.rate * eff;
+      const bottom = 1 - m.up;
+      const wasBurnt = m.side[bottom] >= CFG.burnt;
+      m.side[bottom] += r * dt;
+      m.side[m.up] += r * T.through * dt;
+      m.fireHeat += (f - m.fireHeat) * (1 - Math.exp(-dt / CFG.fireTau));
+      m.warm += (1 - m.warm) * (1 - Math.exp(-dt / CFG.warmTau));
+      m.cookTime += dt;
+      m.busyInt += (busy - 1) * dt;
+      if (!wasBurnt && m.side[bottom] >= CFG.burnt) {
+        m.burnedOnStrong = m.burnedOnStrong || strongAt(s);
+        m.burnedAt = fireName(s);
+        emit(g, 'burning', { id, slot: s });
+      }
+    }
+    // 皿の上：余熱（焼け具合が少し進む）→ 冷める（焼け具合は変わらない）
+    for (let p = 0; p < CFG.plates; p++) {
+      const id = g.plates[p];
+      if (!id) continue;
+      const m = g.meats[id];
+      const T = TYPES[m.type];
+      if (m.rest && !m.restDone) {
+        const R = m.rest.dur;
+        const t0 = m.rest.t, t1 = Math.min(R, t0 + dt);
+        // 余熱の勢いは上げた直後が強く、だんだん0へ（直線）。区間で積分するので dt に左右されない
+        const frac = (t1 - t0) * (2 / R) - (t1 * t1 - t0 * t0) / (R * R);
+        m.side[0] += m.rest.carry[0] * frac;
+        m.side[1] += m.rest.carry[1] * frac;
+        m.rest.t = t1;
+        const left = t0 + dt - R;
+        if (m.rest.t >= R) {
+          m.restDone = true;
+          emit(g, 'rested', { id, plate: p });
+          if (left > 0) m.warm = Math.max(0, m.warm - left / T.cool);
+        }
+      } else {
+        m.warm = Math.max(0, m.warm - dt / T.cool);
+      }
+    }
+    // 客
+    const progress = Math.min(1, g.t / CFG.duration);
+    g.seats.forEach((seat, i) => {
+      if (seat.state === 'empty') {
+        seat.nextIn -= dt;
+        if (seat.nextIn <= 0 && g.timeLeft > 4) spawn(g, i, progress);
+      } else if (seat.state === 'wait') {
+        seat.cust.patience -= dt;
+        if (seat.cust.patience <= 0) {
+          seat.state = 'leave';
+          seat.timer = CFG.reactTime;
+          seat.react = { result: { fail: 'leave', rank: 'fail' }, order: seat.cust.order, char: seat.cust.char };
+          g.stats.leave++;
+          g.combo = 0;
+          emit(g, 'leave', { seat: i });
+        }
+      } else {
+        seat.timer -= dt;
+        if (seat.timer <= 0) {
+          seat.state = 'empty';
+          seat.cust = null; seat.react = null;
+          const [a, b] = CFG.arriveGap;
+          seat.nextIn = a + g.rng() * (b - a);
+        }
+      }
+    });
+    if (g.t >= CFG.duration) end(g);
+  }
+
+  function spawn(g, i, progress) {
+    const seat = g.seats[i];
+    const n = g.custCount++;
+    let order;
+    if (g.tutorial && n === 0) order = { type: 'kalbi', target: 'hodo' };
+    else {
+      const anyRate = progress < 0.15 ? 0.6 : CFG.anyTypeRate;
+      order = {
+        type: g.rng() < anyRate ? null : TYPE_KEYS[Math.floor(g.rng() * 3)],
+        target: TARGET_KEYS[Math.floor(g.rng() * 3)],
+      };
+    }
+    const patience = (CFG.patienceStart + (CFG.patienceEnd - CFG.patienceStart) * progress) * (g.tutorial && n === 0 ? 1.6 : 1);
+    seat.cust = { char: Math.floor(g.rng() * CHARS), order, patience, maxPatience: patience, n };
+    seat.state = 'wait';
+    emit(g, 'arrive', { seat: i });
+  }
+
+  function end(g) {
+    if (g.state === 'over') return;
+    g.state = 'over';
+    g.timeLeft = 0;
+    g.leftover = onGrillCount(g) + g.plates.filter((x) => x != null).length;
+    emit(g, 'end');
+  }
+
+  // ふりかえり：実際の記録から、多かった失敗の理由を出す（根拠のないことは書かない）
+  function lessons(g) {
+    const st = g.stats;
+    const L = [];
+    if (st.carryOver) L.push({ n: st.carryOver, key: 'carry', text: '網から上げたあとの余熱で焼けすぎた', tip: '網から上げても少し焼ける。強火から上げるときほど早めに' });
+    if (st.burnedOnStrong) L.push({ n: st.burnedOnStrong, key: 'strong', text: '強火の上で焦げた', tip: '焦げそうなら弱火へ逃がせる' });
+    const otherBurnt = st.burnt + st.char - st.burnedOnStrong;
+    if (otherBurnt > 0) L.push({ n: otherBurnt, key: 'burnt', text: '焦げた肉を出した', tip: '煙が出たら裏が焦げはじめた合図' });
+    if (st.halfraw) L.push({ n: st.halfraw, key: 'halfraw', text: '片面がナマのまま出した', tip: 'タップで裏返して、両面を焼く' });
+    if (st.raw) L.push({ n: st.raw, key: 'raw', text: '両面ナマで出した', tip: '色が変わるまで待つ' });
+    if (st.cold) L.push({ n: st.cold, key: 'cold', text: '皿で待たせて冷めた', tip: '皿は置きすぎない。湯気が消えたら急いで' });
+    if (st.luke) L.push({ n: st.luke, key: 'luke', text: 'ぬるくなってから出した', tip: '湯気があるうちに出す' });
+    if (st.leave) L.push({ n: st.leave, key: 'leave', text: '待たせて帰らせた', tip: '待ちが短い客から焼く' });
+    if (st.wrong) L.push({ n: st.wrong, key: 'wrong', text: '頼まれたのとちがう肉を出した', tip: '吹き出しの肉を見る' });
+    if (g.leftover) L.push({ n: g.leftover, key: 'left', text: '時間切れで出せずに残った', tip: '終わりぎわは置きすぎない' });
+    L.sort((a, b) => b.n - a.n);
+    return L;
+  }
+
+  // 称号：その回に実際に起きたことから決める
+  function title(g) {
+    const st = g.stats;
+    if (st.char >= 2 || st.burnt + st.char >= 4) return { name: '炭の錬金術師', why: '焦がした肉 ' + (st.burnt + st.char) + '枚' };
+    if (st.raw + st.halfraw >= 3) return { name: '生肉ソムリエ', why: 'ナマで出した肉 ' + (st.raw + st.halfraw) + '枚' };
+    if (st.cold >= 2) return { name: '冷めた関係', why: '冷めた肉 ' + st.cold + '枚' };
+    if (st.leave >= 3) return { name: '閉店の達人', why: '帰った客 ' + st.leave + '人' };
+    if (st.served === 0) return { name: 'ただ肉を眺める人', why: 'だれにも出さなかった' };
+    if (st.perfect >= 5) return { name: '神のトング', why: '神焼き ' + st.perfect + '枚' };
+    if (st.maxBusy >= 6 && st.great + st.perfect >= 6) return { name: '網の支配者', why: '6枚同時に焼いた' };
+    if (g.maxCombo >= 6) return { name: 'コンボ焼き師', why: '最大 ' + g.maxCombo + 'コンボ' };
+    if (g.score >= 1500) return { name: '肉神', why: g.score + '点' };
+    if (g.score >= 800) return { name: '焼肉の鬼', why: g.score + '点' };
+    if (g.score >= 300) return { name: '町の焼き係', why: g.score + '点' };
+    return { name: '見習いトング', why: g.score + '点' };
+  }
+
+  const YG = { CFG, TYPES, TYPE_KEYS, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  if (typeof module !== 'undefined' && module.exports) module.exports = YG;
+  else root.YG = YG;
+})(typeof window !== 'undefined' ? window : globalThis);
