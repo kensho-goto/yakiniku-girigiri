@@ -69,8 +69,20 @@
   // ===== ステージの進み具合（★はステージごとの最高） =====
   const NS = YG.STAGES.length;
   function starsMap() { return store.get('yaki.stars', {}) || {}; }
-  function unlocked(k) { return k === 0 || k === 1 || (starsMap()[k - 1] || 0) >= 1; }
-  function nextStage() { const sm = starsMap(); for (let k = 1; k <= NS; k++) if (!(sm[k] >= 1)) return k; return 0; }
+  // 腕前（はじめに選ぶ）：1＝初心者（ステージ1から）・4＝中級者（ステージ4から）・0＝上級者（本番から。ステージは全部開く）
+  function fromLv() { const v = store.get('yaki.from', null); return v === 0 || v === 1 || v === 4 ? v : null; }
+  function openUpTo() { const f = fromLv(); return f === 0 ? NS : f || 1; }
+  function unlocked(k) { return k === 0 || k <= openUpTo() || (starsMap()[k - 1] || 0) >= 1; }
+  function nextStage() { if (fromLv() === 0) return 0; const sm = starsMap(); for (let k = Math.max(1, fromLv() || 1); k <= NS; k++) if (!(sm[k] >= 1)) return k; return 0; }
+  const LVPICK = [{ v: 1, icon: '🔰', name: '初心者', sub: '焼き方からおぼえる（ステージ1から）' }, { v: 4, icon: '🔥', name: '中級者', sub: '火と余熱から（ステージ4から）' }, { v: 0, icon: '👑', name: '上級者', sub: 'いきなり本番（ステージも全部開く）' }];
+  function showLevels() {
+    if (window.YP && !YP.canStart()) return;
+    const cur = fromLv();
+    $('levelList').innerHTML = LVPICK.map((l) => `<button class="srow${cur === l.v ? ' cur' : ''}" data-v="${l.v}"><span class="no lvi">${l.icon}</span><span class="tx"><b>${l.name}</b><small>${l.sub}</small></span></button>`).join('');
+    $('levelList').querySelectorAll('.srow').forEach((b) => { b.onclick = () => { store.set('yaki.from', Number(b.dataset.v)); $('levels').hidden = true; showBest(); begin(nextStage()); }; });
+    ['title', 'stages', 'result'].forEach((id) => { $(id).hidden = true; });
+    $('levels').hidden = false;
+  }
   function starHtml(n) { return '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>'; }
   function stageLabel(k) { return k ? `ステージ${k}「${YG.STAGES[k - 1].name}」` : '本番（自由に焼く）'; }
 
@@ -131,7 +143,7 @@
     banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {}; prevState = null; warned10 = false;
     acc = 0; last = null;
     mode = 'play';
-    ['title', 'pause', 'result', 'stages', 'intro'].forEach((id) => { $(id).hidden = true; });
+    ['title', 'pause', 'result', 'stages', 'intro', 'levels'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
   }
@@ -148,7 +160,7 @@
   function toTitle() {
     if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
     mode = 'title'; g = null;
-    ['pause', 'result', 'stages', 'intro'].forEach((id) => { $(id).hidden = true; });
+    ['pause', 'result', 'stages', 'intro', 'levels'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
     YS.silence();
     showBest();
@@ -159,7 +171,7 @@
     const k = nextStage();
     const sm = starsMap();
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
-    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b><br>${YG.STAGES[k - 1].learn}` : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう';
+    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b><br>${YG.STAGES[k - 1].learn}` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? '<b>上級者：本番から</b><br>ランクで勝負。自己ベストをねらう' : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう');
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
   }
   showBest();
@@ -170,7 +182,9 @@
     const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Dela Gothic One"', '焼肉0123') : Promise.resolve();
     Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = '焼く'; });
   })();
-  $('startBtn').onclick = () => begin(nextStage());
+  $('startBtn').onclick = () => { if (fromLv() == null && !Object.keys(starsMap()).length) showLevels(); else begin(nextStage()); };
+  $('levelsClose').onclick = () => { $('levels').hidden = true; toTitle(); };
+  $('lvBtn').onclick = showLevels;
   $('againBtn').onclick = () => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); };
   $('rRetry').onclick = () => newRun(stage);
   $('resumeBtn').onclick = () => pause(false);
