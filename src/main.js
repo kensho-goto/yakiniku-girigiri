@@ -24,6 +24,7 @@
   let demoAcc = 0; // タイトルの見本を、画面の速さに関係なく進める
   let stage = 1; // いま（次に）遊ぶステージ。0＝本番
   let tip = null, tipsDone = {}; // ステージで新しく覚えることを、その場で1回だけ教える { x, y, text, t }
+  let prevState = null, warned10 = false; // 「スタート！」「のこり10秒！」を1回だけ出す
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -121,10 +122,11 @@
     if (window.YP && !YP.canStart()) return; // 試遊会：名前を入れてから
     if (g && mode === 'play' && window.YP) YP.quit(g, 'retry');
     if (k != null) stage = k;
-    tut = store.get('yaki.tut', 0) >= 4 ? 4 : 0;
+    // 説明：ステージ1は★1を取るまで毎回。本番などは、はじめての1回だけ
+    tut = (stage === 1 && !(starsMap()[1] >= 1)) || store.get('yaki.tut', 0) < 4 ? 0 : 4;
     g = YG.newGame({ tutorial: tut < 4 && stage <= 1, stage });
     held = null; ptr = null; fx = []; react.fill(null); shake = 0; endAt = 0; lastTick = -1;
-    banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {};
+    banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {}; prevState = null; warned10 = false;
     acc = 0; last = null;
     mode = 'play';
     ['title', 'pause', 'result', 'stages', 'intro'].forEach((id) => { $(id).hidden = true; });
@@ -258,6 +260,7 @@
       if (x > 290) return { kind: 'sound' };
       return null;
     }
+    for (const j of junkBadges()) if (Math.hypot(x - j.x, y - j.y) < 24) return { kind: 'junk', id: j.id };
     for (let i = 0; i < 6; i++) {
       const s = L.slot(i);
       if (Math.abs(x - s.x) < L.slotW / 2 && Math.abs(y - s.y) < L.slotH / 2) return { kind: 'slot', i, id: g.grill[i] };
@@ -274,6 +277,16 @@
       for (let i = 0; i < 4; i++) if (Math.abs(x - L.trayX[i]) < 47) return { kind: 'tray', type: YG.TRAY_KEYS[i] };
     }
     return null;
+  }
+
+  // 焦げた肉・冷めた肉（出しても失敗）には「×」を付けて、タップで捨てられるようにする
+  function isJunk(m) { return m && m.loc !== 'gone' && (Math.max(m.side[0], m.side[1]) >= YG.CFG.burnt || (m.loc === 'plate' && m.restDone && m.warm < YG.CFG.warmCold)); }
+  function junkBadges() {
+    const out = [];
+    if (!g) return out;
+    g.grill.forEach((id, i) => { if (id && isJunk(g.meats[id])) { const s = L.slot(i); out.push({ id, x: s.x + 44, y: s.y - 36 }); } });
+    g.plates.forEach((id, p) => { if (id && isJunk(g.meats[id])) out.push({ id, x: L.plateX[p] + 34, y: L.plateY - 30 }); });
+    return out;
   }
 
   // ===== 操作 =====
@@ -301,7 +314,7 @@
     if (!ptr.drag && Math.hypot(p.x - ptr.sx, p.y - ptr.sy) > 12) {
       const h = ptr.h;
       if (h && h.kind === 'tray' && (h.type === 'toku' ? g.toku > 0 : g.R.types.includes(h.type))) ptr.drag = { kind: 'new', type: h.type };
-      else if (h && (h.kind === 'slot' || h.kind === 'plate') && h.id && g.meats[h.id] && g.meats[h.id].loc !== 'gone') ptr.drag = { kind: 'meat', id: h.id };
+      else if (h && (h.kind === 'slot' || h.kind === 'plate' || h.kind === 'junk') && h.id && g.meats[h.id] && g.meats[h.id].loc !== 'gone') ptr.drag = { kind: 'meat', id: h.id };
       if (ptr.drag) { clearTimeout(ptr.long); held = null; }
     }
   });
@@ -322,6 +335,7 @@
     if (!h) { held = null; return; }
     if (h.kind === 'pause') { pause(true); return; }
     if (h.kind === 'sound') { const lv = YS.cycle(); float(315, 64, ['音あり', '音楽だけ消した', '音を消した'][lv], '#fff', 13, 1.2); return; }
+    if (h.kind === 'junk') { held = null; YG.discard(g, h.id); return; }
     if (h.kind === 'tray' && h.type === 'toku' && g.toku <= 0) { YS.deny(); float(L.trayX[3], L.trayY - 60, '審査員が来たら焼ける', '#ffd84d', 13); held = null; return; }
     if (h.kind === 'tray' && h.type !== 'toku' && !g.R.types.includes(h.type)) { YS.deny(); float(L.trayX[YG.TRAY_KEYS.indexOf(h.type)], L.trayY - 60, 'このステージでは使わない', '#ffd84d', 13); held = null; return; }
     if (h.kind === 'tray') { held = held && held.kind === 'new' && held.type === h.type ? null : { kind: 'new', type: h.type }; return; }
@@ -389,7 +403,7 @@
       else if (ev.type === 'flip') { YS.flip(); if (tut === 1) setTut(2); }
       else if (ev.type === 'move') YS.flip();
       else if (ev.type === 'plate') { YS.plate(); if (tut <= 2 && ev.fromGrill) setTut(3); }
-      else if (ev.type === 'discard') { YS.discard(); if (ev.cost) float(L.trash.x, L.trash.y - 50, '肉代 −' + ev.cost, '#ff9a8a', 15); }
+      else if (ev.type === 'discard') { YS.discard(); store.set('yaki.didDiscard', 1); burst(L.trash.x, L.trash.y - 24, 10, '#9aa3aa', 70, 90); float(L.trash.x, L.trash.y - 30, 'ポイ', '#fff', 14, 0.8); if (ev.cost) float(L.trash.x, L.trash.y - 50, '肉代 −' + ev.cost, '#ff9a8a', 15); }
       else if (ev.type === 'reserve') { YS.plate(); float(L.plateX[ev.plate], L.plateY - 50, '余熱が終わったら出す', '#ffe14d', 12); if (tut === 3) setTut(4); }
       else if (ev.type === 'reserveLost') { YS.deny(); float(L.plateX[ev.plate], L.plateY - 50, '出す予定の客が帰った', '#ff9a8a', 12); }
       else if (ev.type === 'rested') { YS.rested(); burst(L.plateX[ev.plate], L.plateY, 6, '#ffd84d', 80, 60); }
@@ -432,6 +446,7 @@
   function showTip(key, x, y, text) { if (tipsDone[key]) return; tipsDone[key] = 1; tip = { x, y, text, t: 0 }; }
   function checkTips(dt) {
     if (tip) { tip.t += dt; if (tip.t > 3.2) tip = null; }
+    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 44, j.y + 102, '×をタップで捨てる（すてる箱へドラッグでも）'); }
     if (!g.stage || tut < 4 || g.state !== 'play' || (starsMap()[g.stage] || 0) >= 1) return;
     const k = g.stage;
     for (let i = 0; i < 6; i++) {
@@ -463,6 +478,9 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
+      if (prevState === 'ready' && g.state === 'play') banner('スタート！', 'のこり' + g.R.duration + '秒で 売上をかせげ', '#ffd84d', 1.4);
+      if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner('のこり10秒！', '', '#ff5a3a', 1.2); }
+      prevState = g.state;
       checkTips(dt);
       // ランクが上がったら、上の欄でポンと知らせる
       const ri = g.stage ? YG.starsOf(g) : scoreRank(g.score);
@@ -543,7 +561,8 @@
       const hint = carryMeat && carryMeat.loc === 'grill' && !id;
       YD.drawPlate(ctx, p, m, t, { hint, selected: held && held.kind === 'meat' && held.id === id, hideMeat: dragging && ptr.drag.id === id });
     }
-    YD.drawTrash(ctx, t, { hint: !!carryMeat });
+    const junk = junkBadges();
+    YD.drawTrash(ctx, t, { hint: !!carryMeat || junk.length > 0 });
     // 網
     const hint = carrying ? g.grill.map((id) => !id) : null;
     YD.drawGrill(ctx, t, { hint, fever: g.feverLeft > 0, fires: g.R.fires });
@@ -556,6 +575,7 @@
       YD.drawMeat(ctx, m, s.x, s.y + 6 + bob, { scale: 1.12, onGrill: true, t, selected: held && held.kind === 'meat' && held.id === id });
     }
     YD.drawTray(ctx, t, held && held.kind === 'new' ? held.type : null, g.toku, g.R.types);
+    for (const j of junk) { if (!(dragging && ptr.drag.id === j.id)) YD.drawJunkBadge(ctx, j.x, j.y, t); }
     // 演出
     for (const f of fx) {
       const a = 1 - f.t / f.life;
@@ -685,9 +705,14 @@
     }
     const tl = Math.ceil(g.timeLeft);
     const hurry = g.state === 'play' && g.timeLeft <= 10;
-    ctx.save(); ctx.translate(200, 32);
+    const left = Math.max(0, Math.min(1, g.timeLeft / g.R.duration));
+    ctx.font = 'bold 10px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = hurry ? '#ff9a8a' : '#ffd9b0';
+    ctx.fillText('のこり時間', 200, 11);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; YD.roundRect(ctx, 160, 37, 80, 5, 2.5); ctx.fill();
+    ctx.fillStyle = left > 0.5 ? '#7ddc6a' : left > 0.22 ? '#ffd84d' : '#ff5a3a'; YD.roundRect(ctx, 160, 37, Math.max(5, 80 * left), 5, 2.5); ctx.fill();
+    ctx.save(); ctx.translate(200, 33);
     if (hurry) { const p = 1 + 0.12 * Math.max(0, Math.sin(t * 12)); ctx.scale(p, p); }
-    ctx.font = '30px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+    ctx.font = '24px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
     ctx.lineWidth = 5; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(String(tl), 0, 0);
     ctx.fillStyle = hurry ? '#ff5a3a' : '#fff'; ctx.fillText(String(tl), 0, 0);
     ctx.restore();
@@ -718,9 +743,9 @@
       else { ctx.font = 'bold 10px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
     }
     if (g.state === 'ready') {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'; YD.roundRect(ctx, 70, 228, 260, 34, 17); ctx.fill();
-      ctx.font = 'bold 14px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-      ctx.fillText('最初の1枚を置いたらスタート', 200, 250);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; YD.roundRect(ctx, 50, 228, 284, 34, 17); ctx.fill();
+      ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.fillText('最初の1枚を置いたら スタート（' + g.R.duration + '秒）', 192, 250);
       if (g.stage) {
         const st = YG.STAGES[g.stage - 1];
         ctx.font = '15px "Dela Gothic One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
@@ -730,29 +755,100 @@
       }
     }
   }
-  // はじめての1回：やることを、その場所に1つずつ出す
+  // 説明：やることを、その場所に1つずつ出す。指が動いて、どう触るかを見せる
   function renderTutorial(t) {
-    if (tut >= 4 || g.state === 'over') return;
+    if (g.state === 'over') return;
+    if (tut >= 4) { serveHint(t); return; }
     let x, y, text, dir = 1;
-    if (tut === 0) { const ty = g.R.types.includes('kalbi') ? 'kalbi' : g.R.types[0]; x = L.trayX[YG.TRAY_KEYS.indexOf(ty)]; y = L.trayY - 62; text = YG.TYPES[ty].name + 'を網へドラッグ'; }
-    else if (tut === 1) {
+    if (tut === 0) {
+      const ty = g.R.types.includes('kalbi') ? 'kalbi' : g.R.types[0];
+      const tx = L.trayX[YG.TRAY_KEYS.indexOf(ty)];
+      const free = [1, 0, 2, 4, 3, 5].find((i) => !g.grill[i]);
+      if (free != null && !(ptr && ptr.drag)) { const s = L.slot(free); guide(tx, L.trayY - 6, s.x, s.y, t, YD.trayMeat(ty)); }
+      x = tx; y = L.trayY - 74; text = '① ' + YG.TYPES[ty].name + 'を網へドラッグ';
+    } else if (tut === 1) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
-      if (m.side[1 - m.up] < 0.45) { x = s.x; y = s.y + 66; text = '待つ：肉汁が浮いたら裏返しどき'; dir = -1; }
-      else { x = s.x; y = s.y + 66; text = '肉汁が出た！ タップで裏返す'; dir = -1; }
+      x = s.x; y = s.y + 76; dir = -1;
+      if (m.side[1 - m.up] < 0.45) text = '② 待つ：肉汁が浮いたら裏返しどき';
+      else { text = '② 肉汁が出た！ タップで裏返す'; tapGuide(s.x, s.y, t); }
     } else if (tut === 2) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
-      if (Math.min(m.side[0], m.side[1]) < 0.55) { x = s.x; y = s.y + 66; text = '裏も焼けるまで待つ'; dir = -1; }
-      else { x = L.plateX[1]; y = L.plateY + 56; text = '皿か客へドラッグ（余熱で少し焼ける）'; dir = -1; }
+      if (Math.min(m.side[0], m.side[1]) < 0.55) { x = s.x; y = s.y + 76; text = '③ 裏も焼けるまで待つ'; dir = -1; }
+      else {
+        const p = [1, 0, 2].find((k) => !g.plates[k]);
+        if (p != null && !(ptr && ptr.drag)) guide(s.x, s.y, L.plateX[p], L.plateY, t, m);
+        x = s.x; y = s.y + 76; text = '③ 焼けた！ 皿へドラッグ'; dir = -1;
+      }
     } else if (tut === 3) {
-      const pid = g.plates.find((v) => v);
-      const m = pid && g.meats[pid];
-      x = 200; y = 232; dir = -1;
-      text = m && m.restDone ? '注文した客へドラッグ' : '客へドラッグ（余熱が終わったら出る）';
+      const r = serveRoute();
+      if (!r) return;
+      if (!(ptr && ptr.drag)) guide(L.plateX[r.p], L.plateY, L.seatX[r.seat], L.headY, t, g.meats[r.id]);
+      x = L.seatX[r.seat]; y = L.counterY + 10; dir = -1; text = '④ 顔へドラッグで食べさせる';
     }
     if (!text) return;
     bubble(x, y, text, dir, t);
+  }
+  // 皿の肉と、それを待っている客（同じ肉を頼んだ客を先に）
+  function serveRoute() {
+    for (let p = 0; p < 3; p++) {
+      const id = g.plates[p]; if (!id) continue;
+      const m = g.meats[id]; if (m.reserved || isJunk(m)) continue;
+      let best = null;
+      g.seats.forEach((st, i) => { if (st.state !== 'wait') return; const want = st.cust.order.type; if (best == null || (want === m.type && g.seats[best].cust.order.type !== m.type)) best = i; });
+      if (best != null) return { p, id, seat: best };
+    }
+    return null;
+  }
+  // まだ1枚も出していないのに皿で待たせているとき：出し方を見せる（説明が終わった人にも）
+  function serveHint(t) {
+    if (g.stats.served > 0 || g.state !== 'play' || (ptr && ptr.drag)) return;
+    const r = serveRoute(); if (!r) return;
+    const m = g.meats[r.id];
+    if (!m.restDone) return;
+    guide(L.plateX[r.p], L.plateY, L.seatX[r.seat], L.headY, t, m);
+    bubble(L.seatX[r.seat], L.counterY + 10, '顔へドラッグで食べさせる', -1, t);
+  }
+  // 指の見本：(x0,y0) を押して (x1,y1) まで運ぶ。点線の道すじと矢印も出す
+  function guide(x0, y0, x1, y1, t, meat) {
+    const P = 1.9, k = (t % P) / P;
+    const cx = (x0 + x1) / 2, cy = Math.min(y0, y1) - 50;
+    ctx.save();
+    ctx.setLineDash([7, 7]); ctx.lineDashOffset = -t * 30;
+    ctx.strokeStyle = 'rgba(255,225,77,0.9)'; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); ctx.setLineDash([]);
+    const ang = Math.atan2(y1 - cy, x1 - cx);
+    ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - 16 * Math.cos(ang - 0.5), y1 - 16 * Math.sin(ang - 0.5)); ctx.lineTo(x1 - 16 * Math.cos(ang + 0.5), y1 - 16 * Math.sin(ang + 0.5)); ctx.fill();
+    const u = Math.min(1, Math.max(0, (k - 0.18) / 0.6));
+    const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+    const px = (1 - e) * (1 - e) * x0 + 2 * (1 - e) * e * cx + e * e * x1;
+    const py = (1 - e) * (1 - e) * y0 + 2 * (1 - e) * e * cy + e * e * y1;
+    const a = k < 0.88 ? 1 : (1 - k) / 0.12;
+    if (meat) { ctx.globalAlpha = a * 0.8; YD.drawMeat(ctx, meat, px, py - 34, { scale: 0.8, lift: 5, t }); }
+    ctx.globalAlpha = a;
+    finger(px, py, k < 0.18 || (k > 0.78 && k < 0.88), t);
+    ctx.restore();
+  }
+  function tapGuide(x, y, t) {
+    const k = (t % 1.1) / 1.1;
+    ctx.save();
+    if (k < 0.5) { ctx.strokeStyle = `rgba(255,225,77,${1 - k * 2})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 14 + k * 70, 0, 7); ctx.stroke(); }
+    finger(x, y + (k < 0.2 ? 0 : 8), k < 0.2, t);
+    ctx.restore();
+  }
+  // 人さし指（指先が (x,y)）
+  function finger(x, y, press, t) {
+    ctx.save(); ctx.translate(x, y); if (press) ctx.scale(0.9, 0.9);
+    if (press) { ctx.fillStyle = 'rgba(255,225,77,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#ffe0c2'; ctx.strokeStyle = '#3a1a00'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-6, 4); ctx.lineTo(-6, 26); ctx.quadraticCurveTo(-18, 22, -20, 32); ctx.lineTo(-12, 50); ctx.quadraticCurveTo(-2, 62, 14, 58);
+    ctx.quadraticCurveTo(26, 54, 24, 38); ctx.lineTo(24, 28); ctx.quadraticCurveTo(24, 22, 18, 22); ctx.quadraticCurveTo(16, 18, 10, 18);
+    ctx.quadraticCurveTo(8, 14, 4, 14); ctx.lineTo(6, 4); ctx.quadraticCurveTo(6, -4, 0, -4); ctx.quadraticCurveTo(-6, -4, -6, 4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
   // 黄色い案内の吹き出し（dir：1＝下を指す、-1＝上を指す）
   function bubble(x, y, text, dir, t) {
