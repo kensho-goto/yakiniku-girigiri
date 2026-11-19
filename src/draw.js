@@ -408,6 +408,16 @@
     ctx.fillStyle = fg; ctx.textAlign = 'center';
     ctx.fillText((mark ? '× ' : '') + text, x, y + 5);
   }
+  // 焦げ・冷めた肉の「×」（タップで捨てる）
+  function drawJunkBadge(ctx, x, y, t) {
+    const p = 1 + 0.1 * Math.max(0, Math.sin(t * 7));
+    ctx.save(); ctx.translate(x, y); ctx.scale(p, p);
+    ctx.fillStyle = '#e8402a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 15, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineCap = 'round'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.moveTo(6, -6); ctx.lineTo(-6, 6); ctx.stroke();
+    ctx.restore();
+  }
   function drawTrash(ctx, t, o) {
     const b = L.trash;
     ctx.save(); ctx.translate(b.x, b.y);
@@ -420,8 +430,8 @@
     ctx.fillStyle = '#222';
     for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(-14 + i * 9, -27, 6, 4, i, 0, 7); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(ctx, -24, 0, 48, 18, 6); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.fillText('炭入れ', 0, 14);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; roundRect(ctx, -26, 0, 52, 20, 6); ctx.fill();
+    ctx.font = 'bold 13px "Hiragino Sans", sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('すてる', 0, 15);
     if (o && o.hint) {
       ctx.strokeStyle = `rgba(255,225,77,${0.5 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
       roundRect(ctx, -34, -36, 68, 90, 10); ctx.stroke(); ctx.setLineDash([]);
@@ -740,5 +750,5 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, };
+  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, };
 })(window);
