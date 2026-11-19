@@ -30,9 +30,22 @@
   h1 { font-family: var(--num); font-weight: 400; margin: 0; line-height: 1.05; }
   .logo { font-size: 46px; color: var(--gold); text-shadow: 0 4px 0 #a3261b, 0 0 24px rgba(255,120,40,.6); transform: rotate(-3deg); }
   .logo small { display: block; font-family: 'Hiragino Sans', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: .1em; color: #fff; text-shadow: none; margin-bottom: 6px; }
-  #title { flex-direction: column; justify-content: space-between; padding: max(28px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: linear-gradient(rgba(10,5,3,.55), rgba(10,5,3,0) 30%, rgba(10,5,3,0) 55%, rgba(10,5,3,.7)); }
-  #title .logo { font-size: 54px; }
-  #title .card { background: rgba(45,27,18,.94); }
+  /* タイトル：ゲームの絵と同じ物差し（横400×縦760）で置く。どの画面でも、ロゴは客の場所のまん中、カードはトレーの場所 */
+  #title { display: block; padding: 0; }
+  #titleFrame { position: absolute; left: 0; top: 0; width: 400px; height: 760px; transform-origin: 0 0; }
+  #title .tband { position: absolute; left: 0; right: 0; top: 0; height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
+  #title .logo { font-size: 46px; text-align: center; }
+  #title .logo small { font-size: 16px; margin-bottom: 4px; }
+  #title .tagline { margin: 14px 0 0; padding: 4px 14px; font-size: 13px; font-weight: 700; letter-spacing: .08em; color: #ffd9b0; background: rgba(20,10,5,.55); border-radius: 999px; }
+  #title .card { position: absolute; left: 16px; right: 16px; bottom: 12px; width: auto; max-height: none; padding: 12px 16px 10px; background: rgba(45,27,18,.95); border-radius: 20px; }
+  #title .stage-next { margin: 0; font-size: 13px; }
+  #title .stage-next b { font-size: 15px; }
+  #title .btn { margin-top: 8px; padding: 10px; font-size: 26px; }
+  #title .best { margin-top: 8px; font-size: 12px; text-shadow: 0 1px 3px #000; }
+  #title .best b { font-size: 16px; }
+  #title .best:empty { display: none; }
+  #title .tiny { display: inline-block; margin: 6px 8px 0; font-size: 12px; }
+  #title .pt-name { margin-top: 6px; padding: 8px 10px; }
   .flow { flex-wrap: nowrap; }
   .tiny { display: block; margin: 10px auto 0; background: none; border: 0; color: #d9b896; font-size: 13px; text-decoration: underline; cursor: pointer; }
   #rotate { z-index: 20; background: #2a1a14; flex-direction: column; text-align: center; font-size: 20px; font-weight: bold; color: #ffd9b0; }
@@ -133,16 +146,20 @@
 <div id="safe"></div>
 
 <div class="overlay" id="title">
-  <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
+ <div id="titleFrame">
+  <div class="tband">
+    <h1 class="logo"><small>焼き加減は</small>焼肉ギリギリ</h1>
+    <p class="tagline">焼いて、返して、余熱を読む。</p>
+    <div class="best" id="titleBest"></div>
+  </div>
   <div class="card">
-    <p class="sub" style="margin-top:0">焼いて、返して、余熱を読む。</p>
     <div class="stage-next" id="titleStage"></div>
     <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
     <button class="btn" id="startBtn">焼く</button>
-    <div class="best" id="titleBest"></div>
     <button class="tiny" id="stageBtn">ステージをえらぶ・本番へとばす</button>
-    <button class="tiny" id="ptNextTitle" hidden>次の人に渡す（記録を消して、はじめから）</button>
+    <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから">次の人に渡す</button>
   </div>
+ </div>
 </div>
 
 <div class="overlay dim" id="stages" hidden>
