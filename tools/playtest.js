@@ -3,11 +3,14 @@
 //   node tools/playtest.js            … この Mac で動かして、期間限定の URL（cloudflared）を作り、QR の画面を開く
 //   node tools/playtest.js --no-tunnel … URL を作らず、この Mac だけで動かす
 // 見る画面：http://127.0.0.1:8140/qr（配る QR）、http://127.0.0.1:8140/playtest（集計）
+// 変わらない入口：https://kensho-goto.github.io/yakiniku-girigiri/play/
+//   URL を作るたびに、GitHub の playtest-url ブランチの url.json へ今の URL を書く（入口のページがそれを読んで飛ぶ）。
+//   書くには gh に kensho-goto でログインしていること。書かないときは --no-publish
 'use strict';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn, execFile } = require('child_process');
+const { spawn, execFile, execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 // 試しに動かすときは PLAYTEST_DATA で記録の置き場を変えられる（本番の記録を汚さない）
@@ -19,6 +22,47 @@ const MAX_LOG = 50 * 1024 * 1024; // 記録はここまで（いたずらでデ�
 const RATE = { win: 10 * 60 * 1000, max: 400 }; // 1つの通信元から 10分で 400件まで
 fs.mkdirSync(DATA, { recursive: true });
 let publicUrl = null;
+
+// ===== 変わらない入口（GitHub に今の URL を書く） =====
+const REPO = process.env.PLAYTEST_REPO || 'kensho-goto/yakiniku-girigiri';
+const URL_BRANCH = 'playtest-url';
+const FIXED_URL = process.env.PLAYTEST_FIXED_URL || 'https://kensho-goto.github.io/yakiniku-girigiri/play/';
+const PUBLISH = !process.argv.includes('--no-publish') && !process.argv.includes('--no-tunnel');
+let ghToken = null, fixedReady = false, published = null;
+function token() {
+  if (ghToken !== null) return ghToken;
+  try { ghToken = execFileSync('gh', ['auth', 'token', '-u', REPO.split('/')[0]], { encoding: 'utf8', env: Object.assign({}, process.env, { GITHUB_TOKEN: '' }) }).trim(); }
+  catch (e) { ghToken = ''; console.log('GitHub に今の URL を書けません（gh に ' + REPO.split('/')[0] + ' でログインしていない）。入口は使えず、QR は毎回変わります'); }
+  return ghToken;
+}
+async function gh(method, p, body) {
+  const r = await fetch('https://api.github.com/repos/' + REPO + p, { method, headers: { Authorization: 'Bearer ' + token(), Accept: 'application/vnd.github+json', 'User-Agent': 'yakiniku-playtest' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(8000) });
+  return { ok: r.ok, status: r.status, json: await r.json().catch(() => ({})) };
+}
+// on=false は「いまは試遊会をしていない」
+async function publish(url, on) {
+  if (!PUBLISH || !token()) return false;
+  try {
+    let cur = await gh('GET', '/contents/url.json?ref=' + URL_BRANCH);
+    if (cur.status === 404) {
+      const ref = await gh('GET', '/git/ref/heads/' + URL_BRANCH);
+      if (ref.status === 404) {
+        const main = await gh('GET', '/git/ref/heads/main');
+        await gh('POST', '/git/refs', { ref: 'refs/heads/' + URL_BRANCH, sha: main.json.object.sha });
+      }
+    }
+    const content = Buffer.from(JSON.stringify({ url, on, at: new Date().toISOString() }, null, 1) + '\n').toString('base64');
+    const put = await gh('PUT', '/contents/url.json', { message: on ? '試遊会の URL を更新' : '試遊会を終了', content, branch: URL_BRANCH, sha: cur.ok ? cur.json.sha : undefined });
+    if (!put.ok) throw new Error(put.status + ' ' + (put.json.message || ''));
+    published = on ? url : null;
+    console.log(on ? `入口（変わらない URL）：${FIXED_URL} → ${url}` : '入口を「いまは試遊会をしていません」にしました');
+    return true;
+  } catch (e) { console.log('GitHub に今の URL を書けませんでした：' + e.message); return false; }
+}
+// 入口のページが公開されているか（公開前は、QR にその日の URL をそのまま出す）
+async function checkFixed() {
+  try { const r = await fetch(FIXED_URL, { method: 'HEAD', signal: AbortSignal.timeout(8000) }); fixedReady = r.ok; } catch (e) { fixedReady = false; }
+}
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain; charset=utf-8' };
 const ALLOW = /^\/(index\.html|robots\.txt|manifest\.json|icon-\d+\.png|src\/[\w.-]+\.js)?$/; // 配るのはゲームの部品だけ
@@ -71,7 +115,7 @@ const server = http.createServer((req, res) => {
     if (!local) return send(res, 404, 'text/plain', 'not found');
     return send(res, 200, TYPES['.html'], p === '/qr' ? qrPage() : reportPage());
   }
-  if (p === '/api/url') return send(res, 200, TYPES['.json'], JSON.stringify({ url: local ? publicUrl : null }));
+  if (p === '/api/url') return send(res, 200, TYPES['.json'], JSON.stringify(local ? { url: publicUrl, fixed: fixedReady && published && published === publicUrl ? FIXED_URL : null } : { url: null }));
   if (!ALLOW.test(p)) return send(res, 404, 'text/plain', 'not found');
   const file = path.join(ROOT, p === '/' ? 'index.html' : p);
   fs.readFile(file, (err, buf) => {
@@ -87,11 +131,11 @@ function qrPage() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>body{margin:0;background:#2a1a14;color:#fff;font-family:'Hiragino Sans',sans-serif;text-align:center;padding:24px}
 h1{color:#ffd84d;font-size:40px;margin:8px 0}#qr{display:inline-block;background:#fff;padding:18px;border-radius:16px;margin:16px 0;min-width:320px;min-height:320px}
-.url{font-size:18px;word-break:break-all;color:#ffd9b0}.wait{font-size:20px;color:#ffb3a0;min-height:1.4em}ol{display:inline-block;text-align:left;font-size:18px;line-height:1.8}
+.url{font-size:18px;word-break:break-all;color:#ffd9b0}.sub{font-size:13px;color:#b89a88;margin-top:6px;word-break:break-all}.fixed{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:99px;background:#3d6b2a;font-size:14px}.wait{font-size:20px;color:#ffb3a0;min-height:1.4em}ol{display:inline-block;text-align:left;font-size:18px;line-height:1.8}
 a{color:#ffd84d}</style></head><body>
 <h1>焼肉ギリギリ 試遊会</h1>
 <div id="wait" class="wait">URL を作っています…（10秒ほど）</div>
-<div id="qr"></div><div class="url" id="url"></div>
+<div id="qr"></div><div class="url" id="url"></div><div class="sub" id="sub"></div>
 <ol><li>スマホのカメラで QR を読む</li><li>名前（ニックネーム）を入れて「焼く」</li><li>終わったら「どうだった？」を押して送る</li><li>スマホを次の人に回すときは「次の人に渡す」</li></ol>
 <p><a href="/playtest" target="_blank">集計を見る</a></p>
 <script>
@@ -99,8 +143,11 @@ let shown=null;
 async function tick(){
  const j=await (await fetch('/api/url')).json().catch(()=>({}));
  const w=document.getElementById('wait');
- if(j.url && j.url!==shown){ shown=j.url; w.textContent=''; const q=document.getElementById('qr'); q.innerHTML=''; new QRCode(q,{text:j.url,width:320,height:320}); document.getElementById('url').textContent=j.url; }
- if(!j.url){ w.textContent= shown ? 'URL を作り直しています…（前のQRは使えません）' : 'URL を作っています…（10秒ほど）'; }
+ const target=j.fixed||j.url;
+ if(target && target!==shown){ shown=target; w.textContent=''; const q=document.getElementById('qr'); q.innerHTML=''; new QRCode(q,{text:target,width:320,height:320});
+  document.getElementById('url').textContent=target;
+  document.getElementById('sub').innerHTML=j.fixed?'<span class="fixed">この QR はずっと同じ（印刷してOK）</span><br>今つながる先：'+j.url:'この QR は、サーバーを動かし直すと変わります'; }
+ if(!j.url){ w.textContent= shown && !j.fixed ? 'URL を作り直しています…（前のQRは使えません）' : shown ? 'つなぎ直しています…（QR はそのまま使えます）' : 'URL を作っています…（10秒ほど）'; }
  setTimeout(tick,2000);
 }
 tick();
@@ -215,12 +262,20 @@ ${Object.keys(FACE).map((k) => bar(FACE[k], faceCount[k] || 0, 30)).join('')}
 }
 
 // ===== 起動 =====
+// 新しい URL ができたら：外から開けるようになるのを待ってから、入口に書く
+async function onNewUrl(url) {
+  for (let i = 0; i < 15 && url === publicUrl; i++) {
+    try { const r = await fetch(url + '/api/ping', { signal: AbortSignal.timeout(5000) }); if (r.ok) break; } catch (e) { /* まだつながらない */ }
+    await new Promise((ok) => setTimeout(ok, 2000));
+  }
+  if (url === publicUrl && await publish(url, true)) await checkFixed();
+}
 let cf = null, stopping = false;
 function startTunnel() {
   cf = spawn('cloudflared', ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   const watch = (buf) => {
     const m = String(buf).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-    if (m && m[0] !== publicUrl) { publicUrl = m[0]; console.log(`配るURL：${publicUrl}`); fs.writeFileSync(path.join(DATA, 'url.txt'), publicUrl + '\n'); }
+    if (m && m[0] !== publicUrl) { publicUrl = m[0]; console.log(`配るURL：${publicUrl}`); fs.writeFileSync(path.join(DATA, 'url.txt'), publicUrl + '\n'); onNewUrl(publicUrl); }
   };
   cf.stdout.on('data', watch); cf.stderr.on('data', watch);
   cf.on('exit', (code) => {
@@ -236,7 +291,11 @@ server.listen(PORT, '127.0.0.1', () => {
   if (process.platform === 'darwin') spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore', detached: true }).unref();
   if (!TUNNEL) return;
   startTunnel();
-  const stop = () => { stopping = true; if (cf) cf.kill(); process.exit(0); };
+  const stop = async () => {
+    if (stopping) return; stopping = true; if (cf) cf.kill();
+    if (published) await publish('', false); // 入口を「いまは試遊会をしていません」に
+    process.exit(0);
+  };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
   if (process.platform === 'darwin' && !process.argv.includes('--no-open')) execFile('open', ['-a', 'Google Chrome', `http://127.0.0.1:${PORT}/qr`]);
 });
