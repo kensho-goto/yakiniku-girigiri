@@ -473,10 +473,11 @@ test('ステージ1：タンだけ・中火だけ・客1人・45秒・フィー�
 test('★は点で決まる（ステージの stars）・本番は0', () => {
   const g = YG.newGame({ seed: 1, stage: 2 });
   const [a, b, c] = YG.STAGES[1].stars;
-  g.score = a - 1; assert.equal(YG.starsOf(g), 0);
-  g.score = a; assert.equal(YG.starsOf(g), 1);
-  g.score = b; assert.equal(YG.starsOf(g), 2);
-  g.score = c + 100; assert.equal(YG.starsOf(g), 3);
+  g.stats.ok = a - 1; assert.equal(YG.starsOf(g), 0);
+  g.stats.ok = a; assert.equal(YG.starsOf(g), 1);
+  g.stats.ok = b; assert.equal(YG.starsOf(g), 2);
+  g.stats.ok = c + 3; assert.equal(YG.starsOf(g), 3);
+  g.stats.ok = 0; g.score = 99999; assert.equal(YG.starsOf(g), 0, '★は点ではなく枚数で決まる');
   const f = YG.newGame({ seed: 1 });
   f.score = 99999; assert.equal(YG.starsOf(f), 0);
   assert.equal(f.stage, 0);
@@ -501,4 +502,11 @@ test('客の来る間隔は、はじめのステージほど長い', () => {
   const gap = (k) => YG.ruleOf(k).arriveGap[0];
   assert.ok(gap(1) > gap(5) && gap(5) > gap(7));
   assert.deepStrictEqual(YG.ruleOf(7).arriveGap, YG.CFG.arriveGap);
+});
+test('うまく焼けた枚数：頼んだ肉を「ふつう」以上で出したときだけ数える', () => {
+  assert.ok(YG.goodRank({ rank: 'good' }));
+  assert.ok(YG.goodRank({ rank: 'perfect' }));
+  assert.ok(!YG.goodRank({ rank: 'meh' }));
+  assert.ok(!YG.goodRank({ rank: 'fail', fail: 'burnt' }));
+  assert.ok(!YG.goodRank({ rank: 'great', wrongType: true }));
 });

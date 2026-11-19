@@ -69,14 +69,14 @@ function play(seed, maxGrill, err, react, useCarry, stage) {
 }
 
 if (process.argv.includes('--stages')) {
-  // ステージごとに、初心者〜うまい人の点の出方を見る（★1＝初心者が少し慣れると届く、★2＝ふつう、★3＝うまい人の上位）
+  // ステージごとに、初心者〜うまい人の「うまく焼けた枚数」の出方を見る（★は枚数で決まる）（★1＝初心者が少し慣れると届く、★2＝ふつう、★3＝うまい人の上位）
   const BOTS = [['初心者', 1, 0.15, 0.8, false], ['慣れた', 2, 0.08, 0.5, true], ['ふつう', 3, 0.03, 0.25, true], ['うまい', 4, 0.02, 0.2, true]];
   const N = 60;
   const pct = (a, q) => a.slice().sort((x, y) => x - y)[Math.floor(q * (a.length - 1))];
-  console.log('ステージ\t★(今)\t' + BOTS.map((b) => b[0] + '(中央/上位10%)').join('\t') + '\t初心者★1到達\t慣れた★2到達\tうまい★3到達');
+  console.log('ステージ\t★(今)\t' + BOTS.map((b) => b[0] + '(枚 中央/上位10%)').join('\t') + '\t初心者★1到達\t慣れた★2到達\tうまい★3到達');
   YG.STAGES.forEach((st, k) => {
     const stage = k + 1;
-    const res = BOTS.map(([, mg, err, re, carry]) => { const a = []; for (let s = 1; s <= N; s++) a.push(play(s, mg, err, re, carry, stage).score); return a; });
+    const res = BOTS.map(([, mg, err, re, carry]) => { const a = []; for (let s = 1; s <= N; s++) a.push(play(s, mg, err, re, carry, stage).stats.ok); return a; });
     const reach = (a, v) => Math.round(a.filter((x) => x >= v).length / a.length * 100) + '%';
     console.log([stage + ' ' + st.name, st.stars.join('/'), ...res.map((a) => pct(a, 0.5) + '/' + pct(a, 0.9)), reach(res[0], st.stars[0]), reach(res[1], st.stars[1]), reach(res[3], st.stars[2])].join('\t'));
   });

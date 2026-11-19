@@ -36,7 +36,7 @@
   }
   // 次の人に渡す：名前・自己ベスト・説明済み・感想済みを消して、はじめから
   function nextPerson() {
-    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb', 'yaki.stars', 'yaki.seen', 'yaki.stageBest'].forEach(ls.del);
+    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb', 'yaki.stars', 'yaki.seen', 'yaki.stageBest', 'yaki.stageBestN'].forEach(ls.del);
     ls.set('yaki.pid', newId());
     location.reload();
   }
@@ -45,7 +45,7 @@
     const st = g.stats;
     return {
       stage: g.stage || 0, stars: g.stage ? root.YG.starsOf(g) : null,
-      score: g.score, t: Math.round(g.t * 10) / 10, tutorial: !!g.tutorial, fevers: g.fevers,
+      score: g.score, ok: g.stats.ok, t: Math.round(g.t * 10) / 10, tutorial: !!g.tutorial, fevers: g.fevers,
       served: st.served, perfect: st.perfect, great: st.great, good: st.good, meh: st.meh, miss: st.miss,
       raw: st.raw, halfraw: st.halfraw, burnt: st.burnt, char: st.char, cold: st.cold, luke: st.luke, leave: st.leave,
       carryOver: st.carryOver, vipCame: st.vipCame || 0, vipWin: st.vipWin || 0, maxBusy: st.maxBusy,
