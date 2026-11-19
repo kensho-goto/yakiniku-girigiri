@@ -253,8 +253,6 @@
   }
 
   // ===== 網と炭火 =====
-  const FIRE_LABEL = { strong: '強火', mid: '中火', weak: '弱火' };
-  const FIRE_FLAMES = { strong: 3, mid: 2, weak: 1 };
   function drawGrill(ctx, t, opts) {
     const G = L.grill;
     // 七輪の枠
@@ -330,21 +328,23 @@
       }
     }
   }
-  // 火力の札：肉と煙の上に描く（隠れないように）。暗い台に、火の色の文字
-  const FIRE_COLOR = { strong: '#ff6a3a', mid: '#ffc23d', weak: '#8fc3ff' };
+  // 火力の札：木の札に焼印で1文字（列ごとに少し傾けて、手で掛けた感じにする）
+  const FIRE_KANJI = { strong: '強', mid: '中', weak: '弱' };
   function drawFireTags(ctx, fires) {
     const G = L.grill;
     for (let c = 0; c < 3; c++) {
       const fn = YG.fireName(c, fires);
-      const x = L.slotX[c], y = G.y + 14;
-      ctx.fillStyle = 'rgba(20,10,6,0.82)';
-      roundRect(ctx, x - 34, y - 12, 68, 22, 11); ctx.fill();
-      ctx.strokeStyle = FIRE_COLOR[fn]; ctx.lineWidth = 1.5; ctx.stroke();
-      for (let i = 0; i < FIRE_FLAMES[fn]; i++) drawFlame(ctx, x - 22 + i * 9, y + 6, 4, 11, 1);
-      ctx.fillStyle = FIRE_COLOR[fn];
-      ctx.font = 'bold 13px "Hiragino Sans", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(FIRE_LABEL[fn], x - 22 + FIRE_FLAMES[fn] * 9 + 2, y + 4);
+      ctx.save(); ctx.translate(L.slotX[c] + (c - 1) * 2, G.y + 2); ctx.rotate([-0.04, 0.03, -0.02][c]);
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; roundRect(ctx, -17, -13, 36, 34, 4); ctx.fill();
+      const gw = ctx.createLinearGradient(-18, 0, 18, 0);
+      gw.addColorStop(0, '#c99a62'); gw.addColorStop(0.5, '#dcb07a'); gw.addColorStop(1, '#bf8c55');
+      ctx.fillStyle = gw; roundRect(ctx, -18, -16, 36, 34, 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,70,30,.35)'; ctx.lineWidth = 1; // 木目
+      for (let i = -10; i <= 12; i += 6) { ctx.beginPath(); ctx.moveTo(-16, i); ctx.bezierCurveTo(-6, i + 2, 6, i - 2, 16, i + 1); ctx.stroke(); }
+      ctx.font = '24px "Kaisei Decol", "Hiragino Mincho ProN", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(40,14,4,.9)'; ctx.shadowColor = 'rgba(60,20,0,.6)'; ctx.shadowBlur = 2;
+      ctx.fillText(FIRE_KANJI[fn], 0, 2);
+      ctx.restore();
     }
   }
   function drawFlame(ctx, x, y, w, h, a) {
