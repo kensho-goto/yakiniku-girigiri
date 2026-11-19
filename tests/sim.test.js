@@ -66,10 +66,10 @@ test('網の上では下の面だけが大きく焼け、裏返すと反対の�
 test('強火は弱火より速く焼ける・肉の種類で速さが変わる', () => {
   const g = YG.newGame({ seed: 1 });
   freezeCustomers(g);
-  const a = YG.place(g, 'kalbi', 1); // 強
+  const a = YG.place(g, 'kalbi', 0); // 強（左の列）
   const b = YG.place(g, 'kalbi', 2); // 弱
-  const c = YG.place(g, 'tan', 3); // 中
-  const d = YG.place(g, 'harami', 0); // 中
+  const c = YG.place(g, 'tan', 4); // 中
+  const d = YG.place(g, 'harami', 1); // 中
   run(g, 2);
   const M = g.meats;
   assert.ok(M[a].side[1] > M[b].side[1] * 2);
@@ -107,7 +107,7 @@ test('強火から上げると、弱火から上げるより余熱が大きい',
     run(g, 4);
     return m.side[1] - at;
   };
-  assert.ok(carryFrom(1) > carryFrom(2) * 2.5);
+  assert.ok(carryFrom(0) > carryFrom(2) * 2.5);
 });
 
 test('余熱の量は、1コマの長さ（端末の速さ）でほぼ変わらない', () => {
@@ -492,4 +492,13 @@ test('ステージ7と本番は、同じ決まり（審査員・ラストオー�
 test('ステージ1〜5は、にぎわいの点が付かない', () => {
   for (const k of [1, 2, 3, 4, 5]) assert.equal(YG.ruleOf(k).busy, false, 'ステージ' + k);
   assert.equal(YG.ruleOf(6).busy, true);
+});
+test('火は左から 強・中・弱（上の段と下の段で同じ）', () => {
+  const names = [0, 1, 2, 3, 4, 5].map((i) => YG.fireName(i));
+  assert.deepStrictEqual(names, ['strong', 'mid', 'weak', 'strong', 'mid', 'weak']);
+});
+test('客の来る間隔は、はじめのステージほど長い', () => {
+  const gap = (k) => YG.ruleOf(k).arriveGap[0];
+  assert.ok(gap(1) > gap(5) && gap(5) > gap(7));
+  assert.deepStrictEqual(YG.ruleOf(7).arriveGap, YG.CFG.arriveGap);
 });

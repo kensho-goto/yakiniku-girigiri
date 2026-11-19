@@ -130,7 +130,8 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 | 変えたいもの | 場所 |
 |---|---|
 | 焼ける速さ（肉ごと） | `TYPES.*.rate`（下の面）、`TYPES.*.through`（上の面へ伝わる割合） |
-| 火力（6枠） | `CFG.fires`（左から 中・強・弱 ×2段） |
+| 火力（6枠） | `CFG.fires`（左から 強・中・弱 ×2段） |
+| 客が来る間隔 | `CFG.arriveGap`（本番）・ステージごとは `STAGES[].rule.arriveGap` |
 | カルビの脂の燃え方 | `TYPES.kalbi.strongBoost` |
 | 余熱の大きさ・長さ | `TYPES.*.carry`・`TYPES.*.rest`、熱のたまり方 `CFG.fireTau` |
 | 冷める速さ | `TYPES.*.cool`、ぬるい・冷めたの境目 `CFG.warmLuke`・`CFG.warmCold` |
