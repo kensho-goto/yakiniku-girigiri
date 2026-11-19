@@ -22,15 +22,15 @@
     warmLuke: 0.45, // 温かさがこれより下は「ぬるい」（1段下がる）
     warmCold: 0.15, // これより下は「冷めた」（失敗）
     wrongTypeMult: 0.6, // 頼んだ肉とちがう
-    // 網の6枠の火力（上の段・下の段、左から 中・強・弱）
-    fires: [1.0, 1.7, 0.5, 1.0, 1.7, 0.5],
+    // 網の6枠の火力（上の段・下の段、左から 強・中・弱。縦の列で火が同じ）
+    fires: [1.7, 1.0, 0.5, 1.7, 1.0, 0.5],
     fireTau: 1.2, // 肉にたまる熱が火力に追いつく速さ（秒）。余熱の大きさを決める
     warmTau: 0.8, // 網の上で温まる速さ（秒）
     plates: 3,
     patienceStart: 28, // はじめの客の待てる秒数
     patienceEnd: 18, // 終わりごろの客の待てる秒数
     firstArrivals: [0, 6, 14], // 3つの席に最初の客が来る時刻（スタートからの秒）
-    arriveGap: [1.5, 3.5], // 客が帰ってから次が来るまで
+    arriveGap: [2, 4], // 客が帰ってから次が来るまで（本番。ステージでは長め）
     anyTypeRate: 0.3, // 「どの肉でも」の注文の割合
     anyTypeMult: 0.8, // 「どの肉でも」の客は点がひかえめ（合う肉を頼んだ客に出すほうが得）
     reactTime: 1.6, // 客が反応している秒数（このあいだも他の操作はできる）
@@ -78,38 +78,38 @@
   const MID = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
   const FULL = {
     duration: CFG.duration, seats: 3, types: TYPE_KEYS.slice(), targets: TARGET_KEYS.slice(), anyRate: CFG.anyTypeRate,
-    fires: CFG.fires.slice(), fever: true, busy: true, vip: true, lastOrder: true, meatCost: true, coolMul: 1,
+    fires: CFG.fires.slice(), arriveGap: CFG.arriveGap.slice(), fever: true, busy: true, vip: true, lastOrder: true, meatCost: true, coolMul: 1,
     patience: [CFG.patienceStart, CFG.patienceEnd], firstArrivals: CFG.firstArrivals.slice(),
   };
   const STAGES = [
     { name: '屋台', learn: '置く → 返す → 皿 → 客',
       intro: ['トレーのタンを、網へドラッグ', '肉汁が浮いたら、タップで裏返す', '両面が焼けたら、皿へ。そして客へ'],
-      rule: { duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
-      stars: [60, 250, 450] },
+      rule: { arriveGap: [4, 6], duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
+      stars: [60, 170, 300] },
     { name: '裏を読む', learn: '肉汁と煙で、見えない裏を読む',
       intro: ['上から見えるのは、上の面だけ', '肉汁が浮いたら、下が焼けた合図', '煙が出たら、下が焦げはじめた合図'],
-      rule: { duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
-      stars: [80, 330, 950] },
+      rule: { arriveGap: [4, 6], duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
+      stars: [80, 290, 700] },
     { name: '好みを聞く', learn: 'うす焼き・ほどよく・こんがり',
       intro: ['客ごとに、好みの焼き加減がちがう', '吹き出しの焼き色の見本に合わせる', '少し焼きすぎた肉は、こんがり派へ'],
-      rule: { duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
-      stars: [100, 250, 500] },
+      rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
+      stars: [100, 220, 420] },
     { name: '火を使い分ける', learn: '中火・強火・弱火',
       intro: ['列ごとに、火の強さがちがう（上の札）', '強火は速いが、焦げやすい', '焦げそうなら、弱火へドラッグで逃がす'],
-      rule: { duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
-      stars: [100, 250, 500] },
+      rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
+      stars: [90, 210, 420] },
     { name: '余熱を読む', learn: '上げたあとも焼ける',
       intro: ['皿へ上げても、しばらく焼ける（余熱）', '厚いハラミ・強火から上げた肉ほど、よく進む', 'ねらいより少し手前で上げる'],
-      rule: { duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
-      stars: [100, 380, 700] },
+      rule: { arriveGap: [3, 5], duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
+      stars: [100, 380, 620] },
     { name: '満席', learn: 'たくさん焼く・フィーバー・肉代',
       intro: ['同時にたくさん焼くほど、点が増える', 'うまい以上を続けると、フィーバー（点が2倍）', '捨てた肉・残した肉は、肉代を引かれる'],
-      rule: { vip: false },
-      stars: [120, 600, 1400] },
+      rule: { arriveGap: [2.5, 4.5], vip: false },
+      stars: [120, 600, 1250] },
     { name: '審査員', learn: '特上カルビで3倍',
       intro: ['審査員が来たら、特上カルビが焼ける', '好みどおりに出すと、点が3倍', '残り15秒は、ラストオーダー'],
       rule: {},
-      stars: [150, 800, 1600] },
+      stars: [150, 750, 1600] },
   ];
   // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
   function ruleOf(stage) {
@@ -520,7 +520,7 @@
         if (seat.timer <= 0) {
           seat.state = 'empty';
           seat.cust = null; seat.react = null;
-          const [a, b] = g.lastOrder ? CFG.lastArriveGap : CFG.arriveGap;
+          const [a, b] = g.lastOrder ? CFG.lastArriveGap : g.R.arriveGap;
           seat.nextIn = (a + g.rng() * (b - a)) * (g.feverLeft > 0 && !g.lastOrder ? CFG.feverArriveMul : 1);
         }
       }
