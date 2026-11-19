@@ -7,7 +7,7 @@
   const msg = document.getElementById('gateMsg');
   let ok = false;
   try { ok = localStorage.getItem(KEY) === HASH; } catch (e) { /* 保存できない環境では毎回聞く */ }
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('claude.ai') || location.hostname.endsWith('claudeusercontent.com') || location.hostname.endsWith('trycloudflare.com')) ok = true; // 試遊会の期間限定URLは、QRを渡した人だけが知っている
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('claude.ai') || location.hostname.endsWith('claudeusercontent.com')) ok = true; // 試遊会（trycloudflare）も合言葉を聞く。入口の URL は変わらず公開の場所にあるため
   if (ok) return;
   gate.hidden = false;
   // ローマ字・カタカナでも通るように、ひらがなにそろえる
