@@ -283,6 +283,22 @@
     if ($('rTools')) $('rTools').onclick = () => showTools(true);
   }
   $('toolBtn').onclick = () => showTools(false);
+  // タイトル右下の絵：お品書き（ステージ）とトング（道具）
+  $('stagePic').src = pic('menu-board', 84, 62, (x) => {
+    x.lineJoin = 'round'; x.lineCap = 'round';
+    [[-0.08, 18], [0.06, 44]].forEach(([r, cx], j) => { // 壁に貼った短冊を2枚
+      x.save(); x.translate(cx + 4, 32); x.rotate(r);
+      x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(-12, -24, 26, 54);
+      x.fillStyle = '#f6efdc'; x.strokeStyle = '#120c08'; x.lineWidth = 2.5; x.beginPath(); x.rect(-14, -27, 26, 54); x.fill(); x.stroke();
+      x.strokeStyle = '#2a1206'; x.lineWidth = 3;
+      for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(-1, -16 + i * 12); x.lineTo(-1, -9 + i * 12 - (i === 2 ? 2 : 0)); x.stroke(); }
+      x.fillStyle = '#c03a2a'; x.beginPath(); x.arc(-1, -22, 3.2, 0, 7); x.fill();
+      x.restore();
+    });
+    x.fillStyle = '#ffd84d'; x.strokeStyle = '#120c08'; x.lineWidth = 2.5; // ★
+    x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 6 : 14; x.lineTo(70 + Math.cos(a) * rr, 40 + Math.sin(a) * rr); } x.closePath(); x.fill(); x.stroke();
+  });
+  $('toolPic').src = toolImg('tong');
   // ことばの切りかえ：タイトルの左上。押すと3つのことばが出る（いまのことばにマーカーの丸）。外を押すと閉じる
   if (window.YI) {
     $('langNow').textContent = YI.NAMES[YI.lang];
@@ -310,7 +326,8 @@
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
     $('titleStage').innerHTML = k ? jaen(`つぎは <b>${YG.STAGES[k - 1].name}</b>`, `Next up: <b>${YG.STAGES[k - 1].name}</b>`, `下一关 <b>${YG.STAGES[k - 1].name}</b>`) : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? jaen('つぎは <b>本番</b>', 'Next up: <b>Showtime</b>') : jaen('<b>全部クリア！</b> 本番で自己ベストを', '<b>All clear!</b> Go beat your Showtime best'));
     const sh = shopState();
-    $('toolBtn').innerHTML = sh.tickets > 0 ? jaen('道具<span class="badge">を強くできる！</span>', 'Tools <span class="badge">upgrade!</span>') : jaen('道具', 'Tools');
+    $('toolLabel').textContent = sh.tickets > 0 ? jaen('道具を強く', 'Upgrade', '强化道具') : jaen('道具', 'Tools', '道具');
+    $('toolBtn').classList.toggle('has', sh.tickets > 0);
     const brName = TOKUSEN.test(br) ? jaen('特選A5', 'A5+') : br; // 特選A5 は今のことばで
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}${jaen('　', ' &nbsp; ', '　')}` : '') + (b ? jaen(`本番の自己ベスト <b>${b}</b>`, `Showtime best <b>${b}</b>`, `正式营业最佳 <b>${b}</b>`) + (br ? jaen(`　最高ランク <b>${brName}</b>`, ` &nbsp; Top rank <b>${brName}</b>`, `　最高等级 <b>${brName}</b>`) : '') : '');
   }
@@ -321,8 +338,8 @@
     if (!(store.get('yaki.plays', 0) > 0)) { b.hidden = true; return; }
     const key = todayKey(), t = YG.dailyOf(key), r = dailyRec();
     b.hidden = false;
-    b.innerHTML = jaen(`今日の網 <small>${mmdd(key)}</small> <b>${t.name}</b>`, `Today's Grill <small>${mmdd(key)}</small> <b>${t.name}</b>`, `今日烤网 <small>${mmdd(key)}</small> <b>${t.name}</b>`) +
-      (r.tries ? `<span class="db">${jaen(`今日のベスト ${r.best}`, `Today's best ${r.best}`, `今日最佳 ${r.best}`)}</span>` : `<span class="db">${jaen('全員おなじ網。今日だけ', 'Same grill for everyone. Today only', '所有人同一张网，仅限今天')}</span>`);
+    b.innerHTML = `<small>${jaen('今日の網', "Today's Grill", '今日烤网')} ${mmdd(key)}</small><b>${t.name}</b>` +
+      (r.tries ? `<span class="db">${jaen(`今日のベスト ${r.best}`, `Today's best ${r.best}`, `今日最佳 ${r.best}`)}</span>` : `<span class="db">${jaen('全員おなじ網。今日だけ', 'Same for all. Today only', '大家同一张网')}</span>`);
   }
   showDailyBtn();
   $('dailyBtn').onclick = startDaily;
