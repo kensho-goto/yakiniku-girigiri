@@ -183,7 +183,7 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 - `src/main.js`：画面の流れ、タップとドラッグ、演出。1/60 秒ずつ固定の刻みで進めます。端末の速さで焼け方は変わりません。
 - `src/lines.js`：反応のセリフと顔。
 - `src/sound.js`：音（WebAudio で作る。ファイルなし）。
-- `src/gate.js`：合言葉の画面（localhost では出ない）。
+
 - `src/playtest.js`：試遊会の記録と感想（試遊サーバーがいるときだけ動く）。`tools/playtest.js`：試遊サーバー・QR・集計。
 - `manifest.json`・`icon-*.png`：ホーム画面に追加したときの名前とアイコン。
 - `tests/sim.test.js`：テスト。`tools/bot.js`：自動の遊び手。
@@ -209,3 +209,10 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 | Trombone Champ | 失敗ごとにちがう間の抜けた音 |
 
 ランク・フィーバー・審査員で追加した参考（説明を読んだだけ。遊んでいない）：Overcooked や音楽ゲームの「段階つきの評価」→ ランク、ツムツムの「フィーバー」→ メーター式フィーバー、Papa's シリーズの料理評論家 → 審査員。
+
+## 見た目の決まり（AI っぽさを出さない）
+
+- 文字を四角い箱に入れない。ふちの太い手書きの字を、店の絵の上にじかに置く（Penguin Diner・にゃんこ大戦争の見せ方）。
+- 字は2つだけ：ふだんは Yusei Magic、叫ぶ字・数字は Potta One。どちらも `fonts/` に、使う字だけ入れてある（OFL）。文言を変えて新しい漢字を使ったら `python tools/fonts.py` で作り直す（中に手順あり）。
+- 説明は店長が話す。絵文字・カッコの補足・％の数字は使わない。
+- アイコンは `tools/icon.html` が元。`node tools/icon.js` で `icon-*.png` を作り直す。

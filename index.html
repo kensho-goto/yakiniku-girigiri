@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="焼肉屋の網をまかされた。客の注文どおりに焼いて出せ。早いと生、遅いと焦げ。スマホで遊べる焼き加減のクソゲー。">
+<link rel="canonical" href="https://kensho-goto.github.io/yakiniku-girigiri/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ジュー">
+<meta property="og:title" content="ジュー｜焼き加減を見きわめろ">
+<meta property="og:description" content="客の注文どおりに焼いて出せ。早いと生、遅いと焦げ。スマホでそのまま遊べる焼肉のクソゲー。">
+<meta property="og:url" content="https://kensho-goto.github.io/yakiniku-girigiri/">
+<meta property="og:image" content="https://kensho-goto.github.io/yakiniku-girigiri/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#2a1a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,17 +22,21 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
-<title>ジュー（焼肉）</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
+<title>ジュー｜焼肉の焼き加減クソゲー</title>
+<link rel="preload" href="fonts/PottaOne.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/YuseiMagic.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  :root { --num: 'Dela Gothic One', 'Hiragino Sans', sans-serif; --fire: #ff7a2f; --gold: #ffd84d; }
+  /* 字はゲームの中に入れてある（使う字だけ。電波が悪くても出る）。OFL：fonts/OFL-*.txt */
+  @font-face { font-family: 'Potta One'; src: url(fonts/PottaOne.woff2) format('woff2'); font-display: swap; }
+  @font-face { font-family: 'Yusei Magic'; src: url(fonts/YuseiMagic.woff2) format('woff2'); font-display: swap; }
+</style>
+<style>
+  :root { --num: 'Potta One', 'Hiragino Sans', sans-serif; --hand: 'Yusei Magic', 'Hiragino Sans', sans-serif; --fire: #ff7a2f; --gold: #ffd84d; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
   #safe { position: fixed; top: 0; height: env(safe-area-inset-top); width: 0; visibility: hidden; }
   html, body { margin: 0; height: 100%; background: #1a100c; color: #fff; overflow: hidden; overscroll-behavior: none;
-    font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; -webkit-user-select: none; user-select: none; }
+    font-family: 'Yusei Magic', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; font-synthesis: none; -webkit-user-select: none; user-select: none; }
   canvas { position: fixed; inset: 0; width: 100vw; height: 100dvh; touch-action: none; display: block; }
   .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 5; }
   .overlay[hidden] { display: none; }
@@ -29,22 +44,42 @@
   .card { width: min(360px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; background: #2d1b12; border: 3px solid #5a3420; border-radius: 22px; padding: 22px 18px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
   h1 { font-family: var(--num); font-weight: 400; margin: 0; line-height: 1.05; }
   .logo { font-size: 46px; color: var(--gold); text-shadow: 0 4px 0 #a3261b, 0 0 24px rgba(255,120,40,.6); transform: rotate(-3deg); }
-  .logo small { display: block; font-family: 'Hiragino Sans', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: .1em; color: #fff; text-shadow: none; margin-bottom: 6px; }
+  .logo small { display: block; font-family: var(--hand); font-size: 18px; letter-spacing: .1em; color: #fff; text-shadow: none; margin-bottom: 6px; }
   /* タイトル：ゲームの絵と同じ物差し（横400×縦760）で置く。どの画面でも、ロゴは客の場所のまん中、カードはトレーの場所 */
   #title { display: block; padding: 0; }
   #titleFrame { position: absolute; left: 0; top: 0; width: 400px; height: 760px; transform-origin: 0 0; }
   #title .tband { position: absolute; left: 0; right: 0; top: 0; height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
   #title .logo { font-size: 74px; line-height: 1.05; text-align: center; }
   #title .logo small { font-size: 18px; letter-spacing: .3em; margin-bottom: 2px; }
-  #title .tagline { margin: 14px 0 0; padding: 4px 14px; font-size: 13px; font-weight: 700; letter-spacing: .08em; color: #ffd9b0; background: rgba(20,10,5,.55); border-radius: 999px; }
-  #title .card { position: absolute; left: 16px; right: 16px; bottom: 12px; width: auto; max-height: none; padding: 12px 16px 10px; background: rgba(45,27,18,.95); border-radius: 20px; }
-  #title .stage-next { margin: 0; font-size: 13px; }
-  #title .stage-next b { font-size: 15px; }
-  #title .btn { margin-top: 8px; padding: 10px; font-size: 26px; }
-  #title .best { margin-top: 8px; font-size: 12px; text-shadow: 0 1px 3px #000; }
-  #title .best b { font-size: 16px; }
+  /* タイトルは箱を使わない：店の絵の上に、ふちの太い手書きの文字をじかに置く */
+  #title { --ink: #2a1206; }
+  #title .logo { text-shadow: -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 0 9px 0 #a3261b, 0 0 30px rgba(255,120,40,.7); }
+  #title .logo small { font-family: var(--num); font-size: 24px; letter-spacing: .25em; color: #ff5a3a; text-shadow: var(--o2); transform: rotate(4deg) translateX(-60px); }
+  #title .card { position: absolute; left: 0; right: 0; bottom: 2px; width: auto; max-height: none; padding: 0 12px 6px; background: none; border: 0; box-shadow: none; border-radius: 0; overflow: visible; }
+  #title .stage-next { margin: 0; font-size: 15px; color: #fff; text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
+  #title .stage-next b { font-size: 17px; }
+  #title .btn { width: auto; margin: 0 auto; padding: 0 24px; background: none; border: 0; box-shadow: none; border-radius: 0; font-size: 58px; line-height: 1.05; color: #ffd84d; transform: rotate(-4deg);
+    text-shadow: -4px -4px 0 var(--ink), 4px -4px 0 var(--ink), -4px 4px 0 var(--ink), 4px 4px 0 var(--ink), 0 -5px 0 var(--ink), 0 5px 0 var(--ink), -5px 0 0 var(--ink), 5px 0 0 var(--ink), 0 10px 0 #a3261b;
+    animation: yaku 1.4s ease-in-out infinite; }
+  #title .btn:active { transform: rotate(-4deg) translateY(4px) scale(.96); box-shadow: none; }
+  @keyframes yaku { 0%, 100% { scale: 1; } 50% { scale: 1.06; } }
+  #title .best { margin-top: 8px; font-size: 14px; color: #fff; text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink); }
+  #title .best b { font-size: 18px; }
   #title .best:empty { display: none; }
-  #title .tiny { display: inline-block; margin: 6px 8px 0; font-size: 12px; }
+  #title .tiny { display: inline-block; margin: 0 8px; padding: 2px 2px; font-size: 16px; white-space: nowrap; color: #ffe2bf; text-decoration: none;
+    text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
+  #title .badge { margin-left: 0; padding: 0; background: none; border-radius: 0; font-size: inherit; color: #ff8a5a; vertical-align: 0; }
+  #title .card { pointer-events: none; } #title .card > * { pointer-events: auto; }
+  #title .tboss { position: absolute; left: 6px; bottom: 34px; width: 92px; pointer-events: none; }
+  #title .tboss img { width: 92px; display: block; }
+  #title .tboss span { position: absolute; left: 4px; top: -22px; white-space: nowrap; font-size: 14px; color: #fff; transform: rotate(-6deg); text-shadow: var(--o2); }
+  /* ロゴ：ジューと鳴るように、ときどき震える。上に湯気 */
+  #title .logo { animation: ju 2.6s ease-in-out infinite; }
+  @keyframes ju { 0%, 70%, 100% { transform: rotate(-3deg); } 74% { transform: rotate(-4.5deg) translateX(-2px); } 78% { transform: rotate(-1.5deg) translateX(2px); } 82% { transform: rotate(-4deg) translateX(-1px); } 86% { transform: rotate(-3deg); } }
+  #title .tband::before, #title .tband::after { content: ''; position: absolute; top: 18px; width: 18px; height: 46px; border-radius: 50%; border-left: 4px solid rgba(255,255,255,.35); filter: blur(1.5px); animation: steam 2.4s ease-in infinite; }
+  #title .tband::before { left: 150px; } #title .tband::after { left: 232px; animation-delay: 1.2s; }
+  @keyframes steam { 0% { transform: translateY(16px) scaleY(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-18px) scaleY(1.2) skewX(-12deg); opacity: 0; } }
+  #title .tiny:nth-of-type(odd) { transform: rotate(-2deg); } #title .tiny:nth-of-type(even) { transform: rotate(2deg); }
   #title .pt-name { margin-top: 6px; padding: 8px 10px; }
   .flow { flex-wrap: nowrap; }
   .tiny { display: block; margin: 10px auto 0; background: none; border: 0; color: #d9b896; font-size: 13px; text-decoration: underline; cursor: pointer; }
@@ -75,7 +110,6 @@
   .lessons small { display: block; color: #d9b896; margin-top: 2px; }
   .field { width: 100%; margin-top: 12px; padding: 12px; font-size: 20px; border-radius: 12px; border: 0; text-align: center; }
   .tip { color: #ffb3a0; min-height: 1.2em; font-size: 13px; }
-  #gate { z-index: 10; background: #2a1a14; }
   /* ランクの判子 */
   .rank { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 130px; padding: 6px 16px 8px; border-radius: 16px; border: 4px solid; margin-bottom: 4px; transform: rotate(-6deg); }
   .rank .rk { font-family: var(--num); font-size: 52px; line-height: 1; }
@@ -155,9 +189,114 @@
   .rank.r-stage .rk { font-size: 40px; letter-spacing: 4px; }
   .rank.r-stage .rk i { font-style: normal; color: rgba(90,50,10,.3); }
   .rank.r-stage0 { color: #ccc; border-color: #888; background: #3a3a3a; }
+
+  /* ===== 箱を使わない画面（Penguin Diner・にゃんこ大戦争の見せ方） =====
+     文字はふちの太い手書きで、店の絵の上にじかに置く。選ぶものは絵＋文字。いま選んでいるものはマーカーで丸をつける */
+  :root { --ink: #2a1206;
+    --o2: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink), 0 3px 0 var(--ink);
+    --o3: -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink), 0 6px 0 var(--ink);
+    --maru: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 80' preserveAspectRatio='none'%3E%3Cpath d='M26 46C18 14 160 4 262 14c40 6 34 42-14 54C170 84 40 80 14 54 2 40 30 18 92 12' fill='none' stroke='%23ffd84d' stroke-width='5' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E"); }
+  .dim { background: radial-gradient(ellipse at 50% 42%, rgba(24,10,4,.62), rgba(12,5,2,.88)); -webkit-backdrop-filter: blur(5px) saturate(.75); backdrop-filter: blur(5px) saturate(.75); }
+  .overlay:not(#title) .card { background: none; border: 0; box-shadow: none; border-radius: 0; padding: 6px 6px 18px; color: #fff; text-shadow: var(--o2); font-size: 15px; }
+  .overlay:not(#title):not([hidden]) .card { animation: drop .34s cubic-bezier(.2,1.5,.45,1) both; }
+  @keyframes drop { from { transform: translateY(-26px) rotate(-1.5deg); opacity: 0; } }
+  .overlay:not(#title) .card .logo { text-shadow: var(--o3), 0 8px 0 #a3261b; transform: rotate(-3deg); }
+  .overlay:not(#title) .btn { width: auto; margin: 16px auto 0; padding: 0 18px; background: none; border: 0; border-radius: 0; box-shadow: none; font-size: 46px; line-height: 1.15; letter-spacing: -.04em; color: #ffd84d; transform: rotate(-3deg);
+    text-shadow: var(--o3), 0 9px 0 #a3261b; animation: yaku 1.4s ease-in-out infinite; }
+  .overlay:not(#title) .btn:active { transform: rotate(-3deg) translateY(4px) scale(.96); }
+  .btn2 { margin: 10px 5px 0; padding: 6px 4px; background: none; border-radius: 0; color: #ffe2bf; font-size: 16px; white-space: nowrap; font-weight: 400; text-shadow: var(--o2); }
+  .btn2:active { transform: translateY(2px) scale(.96); }
+  .btn2.back::before { content: '← '; color: #ffd84d; }
+  .btn2.share { color: #ffd84d; font-size: 19px; transform: rotate(-2deg); }
+  .btn2.share::after { content: ' ↗'; font-size: 15px; }
+  #pause .about { display: block; margin: 18px auto 0; font-size: 13px; opacity: .8; }
+  .tiny { color: #ffe2bf; font-size: 15px; text-decoration: none; text-shadow: var(--o2); }
+  /* 選ぶ行：箱なし。絵＋文字 */
+  .srow { margin-top: 2px; padding: 8px 12px; background: none; border-radius: 0; text-shadow: var(--o2); }
+  .srow:active { transform: scale(.97); }
+  .srow.cur { outline: 0; background: var(--maru) center / 100% 100% no-repeat; }
+  .srow .no { width: 40px; height: auto; border-radius: 0; background: none; color: #ffd84d; font-size: 28px; text-shadow: var(--o2); }
+  .srow .no.lvi { width: 64px; background: none; }
+  .srow .no img { width: 64px; height: auto; display: block; filter: drop-shadow(0 3px 0 rgba(0,0,0,.45)); }
+  .srow .tx b { font-size: 18px; }
+  .srow .tx small { font-size: 13px; color: #ffe2bf; }
+  .srow .st { text-shadow: var(--o2); }
+  .srow .goaln { font-size: 12px; color: #ffe2bf; }
+  .srow.lock { opacity: .5; }
+  .srow.lock .no { background: none; color: #cdb8a4; }
+  .srow.free .no { background: none; color: #ff6a4a; font-size: 20px; width: 52px; }
+  .stars { color: #ffd84d; text-shadow: var(--o2); }
+  .stars i { color: #6a5040; }
+  .lvhead { margin: 14px 4px 0; color: #ffd84d; font-size: 17px; font-weight: 400; text-shadow: var(--o2); transform: rotate(-1.5deg); }
+  .lvhead small { color: #ffe2bf; font-size: 13px; font-weight: 400; }
+  .goal { color: #ffe2bf; text-shadow: var(--o2); font-size: 14px; }
+  .goalbig { color: #fff; font-size: 20px; font-weight: 400; }
+  .goalbig b { font-family: var(--num); font-weight: 400; color: #ffd84d; font-size: 28px; }
+  /* 道具 */
+  .tool .pips { width: 70px; }
+  .tool .pips svg { width: 54px; height: 20px; display: block; margin: 0 auto; }
+  .tool .pips small { margin-top: 2px; padding: 0; background: none; color: #ff8a5a; font-size: 14px; font-weight: 400; text-shadow: var(--o2); transform: rotate(-4deg); }
+  .tool.max .pips small { background: none; color: #ffd84d; }
+  .tool .tx small .nx { color: #fff; font-weight: 400; }
+  .lvbox { margin: 8px 0 0; padding: 0; background: none; border-radius: 0; color: #ffe2bf; font-size: 15px; text-shadow: var(--o2); }
+  .lvbox .lvl { font-size: 22px; text-shadow: var(--o2); }
+  .lvbox .bar { display: none; }
+  .lvbox .lvrule { color: #e8c9a8; font-size: 12.5px; }
+  .lvbox .up { font-weight: 400; color: #fff; }
+  .lvbox .btn2 { margin: 6px 0 0; background: none; color: #ff8a5a; font-size: 19px; }
+  /* 店長のひとこと：手で描いた吹き出し */
+  .boss { display: flex; align-items: flex-end; gap: 2px; margin: 0 0 4px; text-align: left; text-shadow: none; }
+  .boss img { flex: none; width: 80px; height: auto; margin-right: -4px; }
+  .boss .say { position: relative; flex: 1; margin-bottom: 30px; padding: 10px 12px 10px 14px; background: #fffaf0; color: var(--ink); font-size: 15.5px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; line-break: strict; border: 3px solid var(--ink); border-radius: 26px 20px 30px 16px / 20px 28px 18px 30px; transform: rotate(-1deg); }
+  .boss .say::before { content: ''; position: absolute; left: -15px; bottom: 12px; border: 9px solid transparent; border-right: 15px solid var(--ink); }
+  .boss .say::after { content: ''; position: absolute; left: -9px; bottom: 14px; border: 7px solid transparent; border-right: 11px solid #fffaf0; }
+  .boss .say p { margin: 0; }
+  .boss .say p + p { margin-top: 4px; }
+  .boss .say b { color: #c0282a; font-weight: 400; }
+  .intro-list { display: none; }
+  .intro-no { color: #ffe2bf; text-shadow: var(--o2); letter-spacing: .1em; }
+  .sub { color: #ffe2bf; text-shadow: var(--o2); }
+  /* 結果 */
+  .rank { min-width: 0; width: 150px; height: 150px; padding: 0; border: 6px solid currentColor; border-radius: 48% 52% 50% 50% / 52% 48% 52% 48%; background: none !important; box-shadow: none !important; text-shadow: none !important; filter: url(#inky); }
+  .rank .rk { font-size: 54px; }
+  .rank .rw { font-size: 14px; font-weight: 400; max-width: 120px; }
+  .r-C { color: #b9b0a6; } .r-B { color: #e3a06a; } .r-A3 { color: #e9edf2; } .r-A4 { color: #ffd84d; } .r-A5 { color: #ff6f9a; }
+  .r-tokusen { color: #ffe36a; } .r-tokusen .rk { font-size: 34px; } .r-kikaku { color: #ff4a3a; } .r-kikaku .rk { color: inherit; font-size: 40px; }
+  .rank.r-stage { width: auto; height: auto; border: 0; color: #ffd84d; filter: none; }
+  .rank.r-stage .rk { font-size: 64px; letter-spacing: 2px; text-shadow: var(--o3) !important; }
+  .rank.r-stage .rk i { color: #6a5040; }
+  .rank.r-stage .rw { color: #fff; text-shadow: var(--o2) !important; max-width: none; }
+  .rank.r-stage0 { color: #ffd84d; }
+  .next { color: #ffe2bf; text-shadow: var(--o2); font-size: 15px; }
+  .score { text-shadow: var(--o3), 0 8px 0 #a3261b; }
+  .cost { color: #ff9a8a; font-size: 14px; text-shadow: var(--o2); }
+  .new { background: none; color: #ff5a3a; font-family: var(--num); font-size: 20px; padding: 0; border-radius: 0; text-shadow: var(--o2); transform: rotate(-4deg); }
+  .best { color: #ffe2bf; text-shadow: var(--o2); }
+  .lessons { text-align: left; margin-top: 12px; }
+  .lessons div { background: none; padding: 0; margin: 0; }
+  .title { color: #ffe2bf; text-shadow: var(--o2); font-size: 14px; margin-top: 16px; }
+  .title b { text-shadow: var(--o3); letter-spacing: -.03em; }
+  .stats { display: block; margin: 8px 0 0; font-size: 14px; color: #ffe2bf; line-height: 1.8; }
+  .stats div { display: inline-block; margin: 0 6px; padding: 0; background: none; border-radius: 0; font-size: 14px; }
+  .stats div b { display: inline; margin-left: 4px; font-size: 18px; text-shadow: var(--o2); }
+  .stats div.bad b { color: #ff9a8a; }
+  /* 試遊会・合言葉 */
+  .field { background: none; color: #fff; border-radius: 0; border-bottom: 3px solid #ffd84d; text-shadow: var(--o2); }
+  .field::placeholder { color: rgba(255,226,191,.65); text-shadow: none; }
+  .pt { background: none; padding: 4px 0 0; border-radius: 0; }
+  .pt-q { color: #ffe2bf; font-size: 15px; text-shadow: var(--o2); }
+  .pt-faces button { background: none; border: 0; color: #ffe2bf; font-size: 14px; padding: 8px 0; text-shadow: var(--o2); font-family: inherit; }
+  .pt-faces button span { display: none; }
+  .pt-faces button.sel { background: var(--maru) center / 100% 100% no-repeat; color: #fff; }
+  .pt textarea { background: none; color: #fff; border-radius: 0; border-bottom: 3px solid #ffd84d; text-shadow: var(--o2); }
+  .pt textarea::placeholder { color: rgba(255,226,191,.6); text-shadow: none; }
+  .pt-thanks { text-shadow: var(--o2); }
+  #rotate { text-shadow: var(--o2); font-weight: 400; }
+  #rotate .ph { border-color: #ffd84d; border-radius: 10px 12px 9px 13px; box-shadow: 0 0 0 3px var(--ink); }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute"><filter id="inky"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.5"/></filter></svg>
 <canvas id="cv"></canvas>
 <div id="safe"></div>
 
@@ -165,14 +304,14 @@
  <div id="titleFrame">
   <div class="tband">
     <h1 class="logo"><small>焼肉</small>ジュー</h1>
-    <p class="tagline">焼いて、返して、余熱を読む。</p>
     <div class="best" id="titleBest"></div>
   </div>
   <div class="card">
     <div class="stage-next" id="titleStage"></div>
-    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前（ニックネームでOK）"></div>
+    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前。あだ名でいい"></div>
+    <div class="tboss"><span>へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
     <button class="btn" id="startBtn">焼く</button>
-    <button class="tiny" id="stageBtn">ステージ・本番をえらぶ</button><button class="tiny" id="toolBtn">道具</button>
+    <button class="tiny" id="stageBtn">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button>
     <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから">次の人に渡す</button>
   </div>
  </div>
@@ -182,26 +321,26 @@
   <div class="card">
     <h1 class="logo" style="font-size:32px">ステージ</h1>
     <div class="slist" id="stageList"></div>
-    <button class="tiny" id="lvBtn">腕前をえらびなおす（初心者・中級者・上級者）</button>
-    <button class="btn2" id="stagesClose">もどる</button>
+    <button class="tiny" id="lvBtn">腕前をえらびなおす</button>
+    <button class="btn2 back" id="stagesClose">もどる</button>
   </div>
 </div>
 
 <div class="overlay dim" id="tools" hidden>
   <div class="card">
     <h1 class="logo" style="font-size:32px">道具</h1>
-    <div class="lvbox" id="toolInfo"></div>
+    <div class="boss" id="toolBoss"></div><div class="lvbox" id="toolInfo"></div>
     <div class="slist" id="toolList"></div>
-    <button class="btn2" id="toolsClose">もどる</button>
+    <button class="btn2 back" id="toolsClose">もどる</button>
   </div>
 </div>
 
 <div class="overlay dim" id="levels" hidden>
   <div class="card">
-    <h1 class="logo" style="font-size:32px">腕前は？</h1>
-    <p class="sub">いつでも「ステージをえらぶ」から変えられます</p>
+    <div class="boss" id="levelBoss"></div>
     <div class="slist" id="levelList"></div>
-    <button class="btn2" id="levelsClose">もどる</button>
+    <p class="sub" style="font-size:13px">あとから「ステージをえらぶ」で変えられる</p>
+    <button class="btn2 back" id="levelsClose">もどる</button>
   </div>
 </div>
 
@@ -209,9 +348,9 @@
   <div class="card">
     <div class="intro-no" id="introNo"></div>
     <h1 class="logo" style="font-size:36px" id="introName"></h1>
-    <ul class="intro-list" id="introList"></ul>
+    <ul class="intro-list" id="introList"></ul><div class="boss" id="introBoss"></div>
     <div class="goal" id="introGoal"></div>
-    <button class="btn" id="introGo">はじめる</button>
+    <button class="btn" id="introGo">焼く！</button>
   </div>
 </div>
 
@@ -222,6 +361,7 @@
     <button class="btn" id="resumeBtn">つづける</button>
     <button class="btn2" id="retryBtn">はじめから</button>
     <button class="btn2" id="toTitleBtn">タイトルへ</button>
+    <a class="tiny about" href="about.html">このゲームについて</a>
   </div>
 </div>
 
@@ -233,15 +373,14 @@
     <div class="cost" id="rCost"></div>
     <div id="rNew"></div>
     <div class="best" id="rBest" style="margin-top:2px"></div>
+    <button class="btn" id="againBtn">もう一回</button>
+    <div><button class="btn2 share" id="rShare">自慢する</button></div>
+    <div><button class="btn2" id="rRetry" hidden>もう一回</button><button class="btn2" id="rStages" hidden>ステージをえらぶ</button><button class="btn2" id="rTitleBtn">タイトルへ</button></div>
     <div class="lvbox" id="rLevel"></div>
     <div class="lessons" id="rLessons"></div>
-    <button class="btn" id="againBtn">もう一回</button>
-    <button class="btn2" id="rRetry" hidden>もう一回</button>
-    <button class="btn2" id="rStages" hidden>ステージをえらぶ</button>
     <div class="pt" id="ptFeedback" hidden></div>
     <div class="title">今日の称号<b id="rTitle"></b><span id="rWhy"></span></div>
     <div class="stats" id="rStats"></div>
-    <button class="btn2" id="rTitleBtn">タイトルへ</button>
     <button class="btn2" id="ptNextResult" hidden>次の人に渡す</button>
   </div>
 </div>
@@ -251,22 +390,12 @@
   スマホを縦にしてね
 </div>
 
-<div class="overlay" id="gate" hidden>
-  <div class="card">
-    <h1 class="logo" style="font-size:36px">ジュー</h1>
-    <p class="sub">合言葉を入れてね</p>
-    <input id="gateInput" class="field" type="text" autocomplete="off" autocapitalize="off" placeholder="合言葉">
-    <p class="tip" id="gateMsg">&nbsp;</p>
-    <button class="btn" id="gateBtn">はいる</button>
-  </div>
-</div>
-
 <script src="src/sim.js?v=dev"></script>
 <script src="src/lines.js?v=dev"></script>
 <script src="src/draw.js?v=dev"></script>
 <script src="src/sound.js?v=dev"></script>
-<script src="src/gate.js?v=dev"></script>
 <script src="src/playtest.js?v=dev"></script>
 <script src="src/main.js?v=dev"></script>
+<script src="src/count.js?v=dev"></script>
 </body>
 </html>

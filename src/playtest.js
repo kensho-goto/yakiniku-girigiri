@@ -67,7 +67,7 @@
     canStart() {
       if (!on || name()) return true;
       const input = $('ptName');
-      input.classList.add('need'); input.placeholder = '名前を入れてね（ニックネームでOK）'; input.focus();
+      input.classList.add('need'); input.placeholder = '名前を入れてね。あだ名でいい'; input.focus();
       return false;
     },
     start(g) { if (!on) return; playNo++; startedAt = Date.now(); send('start', { playNo, stage: g.stage || 0, tutorial: !!g.tutorial }); },
@@ -89,9 +89,9 @@
     const box = $('ptFeedback');
     let pick = null;
     box.hidden = false;
-    box.innerHTML = `<div class="pt-q">${fbBefore ? '何回か遊んでみて、どう？' : 'どうだった？'}（試遊のアンケート）</div>` +
+    box.innerHTML = `<div class="pt-q">${fbBefore ? '何回か遊んでみて、どう？' : 'どうだった？'}</div>` +
       '<div class="pt-faces">' + FACES.map(([k, e, t]) => `<button data-k="${k}"><span>${e}</span>${t}</button>`).join('') + '</div>' +
-      '<textarea id="ptText" rows="2" placeholder="ひとこと（なくてもOK）例：どこで笑った？どこで困った？"></textarea>' +
+      '<textarea id="ptText" rows="2" placeholder="ひとこと。どこで笑った？ どこで困った？"></textarea>' +
       '<button class="btn2 pt-send" disabled>送る</button>';
     const btns = box.querySelectorAll('.pt-faces button');
     const sendBtn = box.querySelector('.pt-send');
@@ -110,7 +110,7 @@
   }
 
   // サーバーがいるときだけ動く
-  fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
+  if (!/github\.io$/.test(location.hostname)) fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
     if (!j || !j.playtest) return;
     on = true;
     setupName();

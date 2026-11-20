@@ -86,32 +86,32 @@
   };
   // stars：★1（＝目標）・★2・★3 に要る「うまく焼けた枚数」
   const STAGES = [
-    { name: '屋台', learn: '置く → 返す → 皿 → 客',
-      intro: ['トレーのタンを、網へドラッグ', '肉汁が浮いたら、タップで裏返す', '両面が焼けたら、皿へ。そして客へ'],
+    { name: '屋台', learn: '置いて、返して、出す',
+      intro: ['まずはタンを網へ置いてみな。', '肉汁が浮いたら、タップで返す。', '両面焼けたら皿へ。そして客へ。'],
       rule: { arriveGap: [4, 6], duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
       stars: [2, 4, 5] },
     { name: '裏を読む', learn: '肉汁と煙で、見えない裏を読む',
-      intro: ['上から見えるのは、上の面だけ', '肉汁が浮いたら、下が焼けた合図', '煙が出たら、下が焦げはじめた合図'],
+      intro: ['見えるのは上の面だけだ。', '肉汁が浮いたら、下は焼けてる。', '煙が出たら、下が焦げはじめだ。'],
       rule: { arriveGap: [4, 6], duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
       stars: [2, 5, 8] },
-    { name: '好みを聞く', learn: 'うす焼き・ほどよく・こんがり',
-      intro: ['客ごとに、好みの焼き加減がちがう', '吹き出しの焼き色の見本に合わせる', '少し焼きすぎた肉は、こんがり派へ'],
+    { name: '好みを聞く', learn: '客ごとに焼き加減がちがう',
+      intro: ['客ごとに好みがちがうんだ。', '吹き出しの焼き色に合わせな。', '焼きすぎたら、こんがり好きへ回せ。'],
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
       stars: [2, 3, 5] },
-    { name: '火を使い分ける', learn: '左から 強火・中火・弱火',
-      intro: ['列ごとに、火の強さがちがう（上の札）', '強火は速いが、焦げやすい', '焦げそうなら、弱火へドラッグで逃がす'],
+    { name: '火を使い分ける', learn: '強火と弱火を使い分ける',
+      intro: ['列ごとに火の強さがちがう。', '強火は速いが、すぐ焦げる。', '焦げそうなら弱火へ逃がせ。'],
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
       stars: [2, 3, 5] },
     { name: '余熱を読む', learn: '上げたあとも焼ける',
-      intro: ['皿へ上げても、しばらく焼ける（余熱）', '厚いハラミ・強火から上げた肉ほど、よく進む', 'ねらいより少し手前で上げる'],
+      intro: ['皿に上げても、まだ焼ける。余熱だ。', '厚いハラミと強火の肉ほど進む。', 'ねらいの少し手前で上げな。'],
       rule: { arriveGap: [3, 5], duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
       stars: [2, 5, 7] },
-    { name: '満席', learn: 'たくさん焼く・フィーバー・肉代',
-      intro: ['同時にたくさん焼くほど、点が増える', 'うまい以上を続けると、フィーバー（点が2倍）', '捨てた肉・残した肉は、肉代を引かれる'],
+    { name: '満席', learn: 'たくさん焼いて、フィーバー',
+      intro: ['同時にたくさん焼くほど点が増える。', 'うまいを続けるとフィーバー。点が2倍だ。', '捨てた肉と残した肉は、肉代を引くぞ。'],
       rule: { arriveGap: [2.5, 4.5], vip: false },
       stars: [3, 6, 9] },
-    { name: '審査員', learn: '特上カルビで3倍',
-      intro: ['審査員が来たら、特上カルビが焼ける', '好みどおりに出すと、点が3倍', '残り15秒は、ラストオーダー'],
+    { name: '審査員', learn: '特上カルビで点が3倍',
+      intro: ['審査員が来たら、特上カルビを焼け。', '好みどおりなら点が3倍だ。', '残り15秒はラストオーダーだ。'],
       rule: {},
       stars: [3, 7, 10] },
   ];
@@ -119,10 +119,10 @@
   // うまく焼けた枚数の合計が「店の経験」。レベルが1つ上がるごとに、道具を1つ強くできる（各3段）
   const LV_EXP = [0, 5, 12, 20, 30, 42, 56, 72, 90, 110, 132, 156, 182]; // Lv1〜Lv13 に要る経験
   const TOOLS = {
-    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼き始めが +20% 速い', '焼き始めが +40% 速い', '焼き始めが +60% 速い'], speed: [1, 1.2, 1.4, 1.6] },
-    ami: { name: '網', icon: '🥩', lvName: ['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], effect: ['', '焼けすぎてからの進み −15%', '焼けすぎてからの進み −30%', '焼けすぎてからの進み −45%'], over: [1, 0.85, 0.7, 0.55] },
-    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱の待ち1/4・冷めにくい', '余熱が一瞬・もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
-    tong: { name: 'トング', icon: '🥢', lvName: ['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], effect: ['', '返しどきに肉がピョンと跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'] },
+    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼き始めが少し速い', '焼き始めがもっと速い', '焼き始めがすごく速い'], speed: [1, 1.2, 1.4, 1.6] },
+    ami: { name: '網', icon: '🥩', lvName: ['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], effect: ['', '焦げるのが少しおそい', '焦げるのがもっとおそい', '焦げるのがすごくおそい'], over: [1, 0.85, 0.7, 0.55] },
+    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱がすぐ終わり、冷めにくい', '余熱は一瞬。もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
+    tong: { name: 'トング', icon: '🥢', lvName: ['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], effect: ['', '返しどきに肉が跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'] },
   };
   const TOOL_KEYS = Object.keys(TOOLS);
   function levelOf(exp) { let lv = 1; LV_EXP.forEach((v, i) => { if (exp >= v) lv = i + 1; }); return lv; }
