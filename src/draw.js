@@ -853,6 +853,126 @@
     return out.slice(0, 4);
   }
 
+
+  // ===== 断面：客に出した肉を切って、中の焼け具合を見せる（答え合わせ） =====
+  // 面の焼け具合（両面）と肉の厚さから、中の焼け具合を作る。厚い肉ほど中が遅れる
+  const INSIDE = [[0, [172, 24, 48]], [0.4, [198, 44, 64]], [0.58, [226, 84, 100]], [0.72, [240, 130, 132]], [0.88, [218, 162, 142]], [1.05, [184, 138, 114]], [1.3, [136, 98, 78]], [1.6, [70, 50, 40]]];
+  const CUT_LAG = { tan: 0.95, kalbi: 0.88, toku: 0.86, harami: 0.78 };
+  function cutDepth(e, z) {
+    const s0 = e.side[0], s1 = e.side[1];
+    const core = Math.min((s0 + s1) / 2, Math.min(s0, s1) + 0.25) * (CUT_LAG[e.type] || 0.88);
+    const p = e.type === 'tan' ? 0.34 : e.type === 'harami' ? 0.2 : 0.25; // 面の熱が中へ届く深さ
+    // 面に近いところは面より少し先に色が変わって見える（茶色い帯）
+    return core + (s0 * 1.2 - core) * Math.exp(-z / p) + (s1 * 1.2 - core) * Math.exp(-(1 - z) / p);
+  }
+  function insideColor(type, d) {
+    let c = ramp(INSIDE, d);
+    if (type === 'tan') c = mix(c, [250, 228, 222], 0.28);
+    else if (type === 'harami') c = mix(c, [60, 10, 20], 0.12);
+    return c;
+  }
+  // x, y＝断面のまん中。rt＝出してからの秒数
+  function drawCut(ctx, x, y, e, rt) {
+    const T = YG.TYPES[e.type];
+    const w = 116, h = Math.min(40, 16 + T.thick * 3); // 厚さは見やすいように大げさに
+    const pop = Math.min(1, rt / 0.16), ease = 1 + 0.18 * Math.sin(pop * Math.PI) * (1 - pop) - (1 - pop) * 0.4;
+    const eat = rt > 1.22 ? Math.min(1, (rt - 1.22) / 0.3) : 0; // 最後は客がぱくっと食べる
+    if (eat >= 1) return;
+    const rnd = YG.mulberry32(Math.floor((e.side[0] * 97 + e.side[1] * 31) * 1e3) + e.id * 13);
+    const wob = Array.from({ length: 12 }, () => (rnd() - 0.5) * 2.4);
+    const fail = e.result && e.result.fail;
+    const good = e.result && (e.result.rank === 'perfect' || e.result.rank === 'great');
+    ctx.save();
+    ctx.translate(x, y + (1 - pop) * 10 - eat * eat * 34);
+    ctx.scale(ease * (1 - eat), ease * (1 - eat));
+    const half = w / 2, top = -h / 2, bot = h / 2, lid = 7; // lid＝上の面が見える高さ
+    // 断面（手で切ったような、少し不揃いな形）
+    const face = () => {
+      ctx.beginPath();
+      ctx.moveTo(-half + 6, top + wob[0]);
+      ctx.bezierCurveTo(-half / 3, top - 1 + wob[1], half / 3, top + 1 + wob[2], half - 6, top + wob[3]);
+      ctx.quadraticCurveTo(half + 2, top + 2, half + wob[4] * 0.5, 0);
+      ctx.quadraticCurveTo(half + 1, bot - 1, half - 7, bot + wob[5]);
+      ctx.bezierCurveTo(half / 3, bot + 1.5 + wob[6], -half / 3, bot + wob[7], -half + 7, bot + wob[8]);
+      ctx.quadraticCurveTo(-half - 1, bot - 1, -half + wob[9] * 0.5, 0);
+      ctx.quadraticCurveTo(-half - 2, top + 2, -half + 6, top + wob[0]);
+      ctx.closePath();
+    };
+    // 上の面：少し奥に倒れて見える（網の焼き目つき）
+    const tc = meatColor(e.type, e.side[0]);
+    ctx.beginPath();
+    ctx.moveTo(-half + 6, top + wob[0]);
+    ctx.bezierCurveTo(-half / 3, top - 1 + wob[1], half / 3, top + 1 + wob[2], half - 6, top + wob[3]);
+    ctx.quadraticCurveTo(half - 2, top - lid, half - 12, top - lid - 1);
+    ctx.lineTo(-half + 14, top - lid + wob[10] * 0.5);
+    ctx.quadraticCurveTo(-half + 2, top - lid + 1, -half + 6, top + wob[0]);
+    ctx.closePath();
+    ctx.fillStyle = rgb(tc); ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+    ctx.stroke(); ctx.fill();
+    if (e.side[0] > 0.45) {
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = rgb(mix(tc, [24, 12, 6], Math.min(0.75, e.side[0] * 0.5))); ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.lineWidth = 4.5;
+      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * 30 - 6, top + 2); ctx.lineTo(i * 30 + 4, top - lid - 2); ctx.stroke(); }
+      ctx.restore();
+    }
+    // 断面：ふちを太く描いてから中を塗る
+    face(); ctx.lineWidth = 5; ctx.stroke();
+    ctx.save(); face(); ctx.clip();
+    const g = ctx.createLinearGradient(0, top, 0, bot);
+    const crust = Math.min(0.2, 3 / h);
+    for (let k = 0; k <= 16; k++) {
+      const z = k / 16;
+      const c = z < crust ? mix(meatColor(e.type, e.side[0]), [40, 20, 10], 0.2) : z > 1 - crust ? mix(meatColor(e.type, e.side[1]), [40, 20, 10], 0.2) : insideColor(e.type, cutDepth(e, z));
+      g.addColorStop(z, rgb(c));
+    }
+    ctx.fillStyle = g; ctx.fillRect(-half - 4, top - 4, w + 8, h + 8);
+    // 肉の繊維（かすかな横すじ）
+    ctx.strokeStyle = 'rgba(60,10,10,0.12)'; ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i++) { const yy = top + (h * i) / 5 + wob[i] * 0.5; ctx.beginPath(); ctx.moveTo(-half, yy); ctx.quadraticCurveTo(0, yy + wob[i + 4], half, yy); ctx.stroke(); }
+    // 脂：カルビ・特上は白い粒とすじ
+    if (e.type === 'kalbi' || e.type === 'toku') {
+      const fc = rgb(ramp(FAT, cutDepth(e, 0.5)), 0.9);
+      ctx.fillStyle = fc; ctx.strokeStyle = fc; ctx.lineCap = 'round';
+      const n = e.type === 'toku' ? 4 : 2; // 横に流れる脂のすじ
+      for (let i = 0; i < n; i++) {
+        const fy = top + h * (0.3 + (0.4 * (i + rnd() * 0.6)) / n), fx = -half + 6 + rnd() * 24, L2 = 34 + rnd() * 40;
+        ctx.lineWidth = 1.4 + rnd() * 1.4;
+        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.bezierCurveTo(fx + L2 / 3, fy - 2.5, fx + (L2 * 2) / 3, fy + 2.5, fx + L2, fy + (rnd() - 0.5) * 3); ctx.stroke();
+      }
+    }
+    // 肉汁のつや（ちょうどいい・生）
+    if (good || fail === 'raw' || fail === 'halfraw') {
+      ctx.fillStyle = 'rgba(255,255,255,0.32)';
+      ctx.beginPath(); ctx.ellipse(-half * 0.3, top + h * 0.42, half * 0.42, Math.max(2.5, h * 0.1), -0.04, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.ellipse(-half * 0.48, top + h * 0.38, 4, 1.8, 0, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+    // 包丁の光（さっと斜めに横切る）
+    if (rt > 0.08 && rt < 0.38) {
+      const k = (rt - 0.08) / 0.3, sx = -half - 10 + k * (w + 20);
+      ctx.save(); face(); ctx.clip();
+      const sg = ctx.createLinearGradient(sx - 14, 0, sx + 14, 0);
+      sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sg; ctx.fillRect(sx - 14, top - 4, 28, h + 8);
+      ctx.restore();
+    }
+    // 生：赤い汁がしたたる／焦げ・炭：煙
+    if ((fail === 'raw' || fail === 'halfraw') && rt > 0.3) {
+      ctx.fillStyle = 'rgba(176,16,36,0.9)';
+      for (const [px, r, d] of [[-14, 3.2, 0], [9, 2.6, 0.25]]) {
+        const dy = Math.min(12, Math.max(0, rt - 0.3 - d) * 22);
+        ctx.beginPath(); ctx.moveTo(px - r, bot + 1); ctx.quadraticCurveTo(px, bot + dy * 0.4, px - r * 0.8, bot + 1 + dy); ctx.arc(px, bot + 1 + dy, r * 0.8, Math.PI, 0, true); ctx.quadraticCurveTo(px, bot + dy * 0.4, px + r, bot + 1); ctx.fill();
+      }
+    }
+    if (fail === 'char' || fail === 'burnt') {
+      ctx.strokeStyle = fail === 'char' ? 'rgba(60,56,52,0.6)' : 'rgba(150,140,130,0.45)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i++) { const ph = rt * 4 + i * 1.7; ctx.beginPath(); ctx.moveTo(i * 26, top - lid - 2); ctx.quadraticCurveTo(i * 26 + Math.sin(ph) * 8, top - lid - 14, i * 26 - Math.sin(ph) * 6, top - lid - 26); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+
   // 箱に入れず、ふちの太い文字で書く（Penguin Diner・にゃんこ大戦争の見せ方）
   function say(ctx, text, x, y, size, fill, o) {
     o = o || {};
@@ -886,5 +1006,5 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  root.YD = { zf, L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, say, blob, drawBoss, sampleMeat, };
+  root.YD = { zf, L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, say, blob, drawBoss, sampleMeat, drawCut, cutDepth, };
 })(window);
