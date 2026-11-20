@@ -6,7 +6,7 @@ python3 tools/build-portal.py
 ```
 - `dist/ju-web.zip`：itch.io・ふりーむ! に上げるもの（合言葉・数える仕組み・電波なし用・試遊会なし）
 - `dist/ju-crazygames.zip`：CrazyGames に上げるもの（上に加えて、サイトの道具 SDK と `src/portal.js`）
-- 絵：`docs/store/cover-*.png`（`node tools/ogp.js` → `SHOT_LANG=en node tools/ogp.js` → `node tools/store.js` で作り直せる）
+- 絵：`docs/store/cover-*.png`（`node tools/ogp.js` → `SHOT_LANG=en node tools/ogp.js` → `SHOT_LANG=zh node tools/ogp.js` → `node tools/store.js` で作り直せる。日本語・英語・中国語）
 
 ## サイトごとの決まり
 | サイト | 上げるもの | 絵 | 画面の大きさ |
@@ -38,6 +38,17 @@ python3 tools/build-portal.py
 - **Tags（候補）**: cooking, food, time management, casual, funny, mobile
 - **Age rating**: PEGI 3 相当（暴力・血の表現なし）
 
+## 載せる文（中国語・簡体字）
+- **名前**：滋滋（英語名 JUU）
+- **ひとこと**：早了是生，晚了就焦。烤肉店的烤网交给你了，客人点啥火候就烤啥火候。
+- **説明**：
+  烤肉店的烤网交给你了。客人张嘴就是“微熟”“刚好”“焦香”，一个比一个挑。
+  把肉放上烤网，翻面，在刚刚好的那一秒夹进盘子。早了是生的，晚了是炭，让客人等太久，人家直接走人。
+  大火小火来回倒，装了盘还在熟的余热，时不时杀来的美食评审。闯过7关之后，就是不能用道具的正式营业。
+  等级按牛肉分级来：C 到 特选A5。烤焦太多？直接“不合格”。
+- **玩法**：用手指把肉从托盘拖到烤网上。点一下翻面。从烤网拖进盘子，再从盘子拖到客人脸上。焦了的肉点×扔掉。电脑上用鼠标也能玩。
+- **类型**：动作・料理・沙雕游戏
+
 ## 使っているもの（使ってよいかの確認済み）
-- 字：Potta One・Yusei Magic（SIL Open Font License。`fonts/OFL-*.txt`）
+- 字：Potta One・Yusei Magic・ZCOOL KuaiLe（站酷快乐体。中国語だけ）（SIL Open Font License。`fonts/OFL-*.txt`）
 - 絵はすべてプログラムで描いている・音はすべてその場で作っている（素材ファイルなし）

@@ -29,6 +29,8 @@
   /* 字はゲームの中に入れてある（使う字だけ。電波が悪くても出る）。OFL：fonts/OFL-*.txt */
   @font-face { font-family: 'Potta One'; src: url(fonts/PottaOne.woff2) format('woff2'); font-display: swap; }
   @font-face { font-family: 'Yusei Magic'; src: url(fonts/YuseiMagic.woff2) format('woff2'); font-display: swap; }
+  /* 中国語だけ：ZCOOL KuaiLe。ほかのことばでは使わないので読みこまない */
+  @font-face { font-family: 'ZCOOL KuaiLe'; src: url(fonts/ZCOOLKuaiLe.woff2) format('woff2'); font-display: swap; }
 </style>
 <style>
   :root { --num: 'Potta One', 'Hiragino Sans', sans-serif; --hand: 'Yusei Magic', 'Hiragino Sans', sans-serif; --fire: #ff7a2f; --gold: #ffd84d; }
@@ -294,10 +296,25 @@
   #rotate { text-shadow: var(--o2); font-weight: 400; }
   #rotate .ph { border-color: #ffd84d; border-radius: 10px 12px 9px 13px; box-shadow: 0 0 0 3px var(--ink); }
   /* 英語：ロゴの「YAKINIKU」は字の間を詰める。ことばの切りかえは小さめ */
-  #title .tiny.lang { font-size: 14px; color: #ffd84d; }
   html[lang=en] #title .logo small { letter-spacing: .12em; }
   html[lang=en] .r-kikaku .rk { font-size: 30px; }
   html[lang=en] .boss .say { font-size: 14.5px; }
+  #title #ptNextTitle { transform: rotate(-2deg); }
+  /* ことばの切りかえ：タイトルの左上（画面の角。ノッチをよける）。地球の線画＋いまのことば。箱なし */
+  #langBtn { position: absolute; z-index: 2; top: max(10px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); min-width: 44px; min-height: 44px; display: flex; align-items: center; gap: 5px;
+    padding: 4px 6px; background: none; border: 0; color: #ffe2bf; font: 16px 'Yusei Magic', 'Hiragino Sans', sans-serif; text-shadow: var(--o2); cursor: pointer; transform: rotate(-3deg); }
+  #langBtn svg { flex: none; width: 26px; height: 26px; overflow: visible; }
+  #langBtn:active { transform: rotate(-3deg) scale(.94); }
+  /* ことばを選ぶ：3つのことばを縦に。いまのことばにマーカーの丸。字はどのことばでも同じ手書きの字 */
+  #langPick { z-index: 6; }
+  #langPick .card { width: auto; }
+  .lpick { display: block; min-width: 190px; margin: 6px auto; padding: 10px 26px; background: none; border: 0; color: #fff; font: 30px 'Yusei Magic', 'Hiragino Sans', sans-serif; text-shadow: var(--o3); cursor: pointer; }
+  .lpick:nth-child(odd) { transform: rotate(-2deg); } .lpick:nth-child(even) { transform: rotate(2deg); }
+  .lpick.cur { color: #ffd84d; background: var(--maru) center / 100% 100% no-repeat; }
+  .lpick:active { scale: .95; }
+  /* 中国語：字はすべて ZCOOL KuaiLe */
+  html[lang=zh-CN] { --num: 'ZCOOL KuaiLe', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; --hand: var(--num); }
+  html[lang=zh-CN] body { font-family: var(--hand); }
 </style>
 </head>
 <body>
@@ -306,9 +323,10 @@
 <div id="safe"></div>
 
 <div class="overlay" id="title">
+ <button id="langBtn" type="button" aria-label="Language"><svg viewBox="0 0 26 26" aria-hidden="true"><g fill="none" stroke-linecap="round"><g stroke="#2a1206" stroke-width="6"><circle cx="13" cy="13" r="10"/><path d="M3.5 13h19M13 3c-4.5 5-4.5 15 0 20M13 3c4.5 5 4.5 15 0 20"/></g><g stroke="#ffe2bf" stroke-width="2.2"><circle cx="13" cy="13" r="10"/><path d="M3.5 13h19M13 3c-4.5 5-4.5 15 0 20M13 3c4.5 5 4.5 15 0 20"/></g></g></svg><span id="langNow">日本語</span></button>
  <div id="titleFrame">
   <div class="tband">
-    <h1 class="logo" data-en="<small>YAKINIKU</small>JUU"><small>焼肉</small>ジュー</h1>
+    <h1 class="logo" data-en="<small>YAKINIKU</small>JUU" data-zh="<small>烤肉</small>滋滋"><small>焼肉</small>ジュー</h1>
     <div class="best" id="titleBest"></div>
   </div>
   <div class="card">
@@ -316,10 +334,14 @@
     <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前。あだ名でいい" data-en-ph="Your name. A nickname works"></div>
     <div class="tboss"><span data-en="Hey, welcome in!">へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
     <button class="btn" id="startBtn">焼く</button>
-    <button class="tiny" id="stageBtn" data-en="Stages">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button><button class="tiny lang" id="langBtn" data-en="日本語">English</button>
+    <button class="tiny" id="stageBtn" data-en="Stages">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button>
     <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから" data-en-title="Wipe the name and records, start fresh" data-en="Next player">次の人に渡す</button>
   </div>
  </div>
+</div>
+
+<div class="overlay dim" id="langPick" hidden>
+  <div class="card"><div id="langList"></div></div>
 </div>
 
 <div class="overlay dim" id="stages" hidden>
@@ -395,6 +417,7 @@
   <span data-en="Turn your phone upright">スマホを縦にしてね</span>
 </div>
 
+<script src="src/zh.js?v=dev"></script>
 <script src="src/i18n.js?v=dev"></script>
 <script src="src/sim.js?v=dev"></script>
 <script src="src/lines.js?v=dev"></script>

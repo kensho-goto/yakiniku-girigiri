@@ -8,6 +8,7 @@
 <style>
   @font-face { font-family: 'Yusei Magic'; src: url(fonts/YuseiMagic.woff2) format('woff2'); font-display: swap; }
   @font-face { font-family: 'Potta One'; src: url(fonts/PottaOne.woff2) format('woff2'); font-display: swap; }
+  @font-face { font-family: 'ZCOOL KuaiLe'; src: url(fonts/ZCOOLKuaiLe.woff2) format('woff2'); font-display: swap; }
   body { margin: 0; background: #1a100c; color: #ffe2bf; font-family: 'Yusei Magic', 'Hiragino Sans', sans-serif; line-height: 1.8; }
   main { max-width: 560px; margin: 0 auto; padding: 32px 16px 48px; }
   h1 { font-family: 'Potta One', sans-serif; font-weight: 400; color: #ffd84d; font-size: 40px; margin: 0 0 8px; text-shadow: 0 3px 0 #a3261b; }
@@ -15,6 +16,7 @@
   p { margin: 6px 0; }
   a { color: #ffd84d; }
   .back { display: inline-block; margin-top: 28px; font-size: 18px; }
+  html[lang=zh-CN] body, html[lang=zh-CN] h1, html[lang=zh-CN] h2 { font-family: 'ZCOOL KuaiLe', 'PingFang SC', 'Hiragino Sans GB', sans-serif; }
 </style>
 </head>
 <body>
@@ -27,10 +29,11 @@
   <p data-en="Your best scores and stars stay on this device.">自己ベストや★は、この端末の中にだけ保存しています。</p>
 
   <h2 data-en="Credits">使っているもの</h2>
-  <p data-en="Fonts: Potta One and Yusei Magic, SIL Open Font License. Every picture and sound is made in code.">字：Potta One・Yusei Magic（SIL Open Font License）。絵と音は、すべてプログラムで作っています。</p>
+  <p data-en="Fonts: Potta One, Yusei Magic and ZCOOL KuaiLe, SIL Open Font License. Every picture and sound is made in code.">字：Potta One・Yusei Magic・ZCOOL KuaiLe（SIL Open Font License）。絵と音は、すべてプログラムで作っています。</p>
 
   <a class="back" href="./" data-en="&larr; Back to the game">← ゲームにもどる</a>
 </main>
+<script src="src/zh.js?v=dev"></script>
 <script src="src/i18n.js?v=dev"></script>
 </body>
 </html>

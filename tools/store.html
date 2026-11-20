@@ -1,8 +1,10 @@
 <!doctype html><html><head><meta charset="utf-8">
-<!-- ゲームサイトに載せる絵の元。?w=横&h=縦&lang=ja|en。tools/store.js が撮って docs/store/ に置く（shot.png は tools/ogp.js が作る） -->
+<!-- ゲームサイトに載せる絵の元。?w=横&h=縦&lang=ja|en|zh。tools/store.js が撮って docs/store/ に置く（shot.png は tools/ogp.js が作る） -->
 <style>
 @font-face { font-family: 'Potta One'; src: url(../fonts/PottaOne.woff2); }
 @font-face { font-family: 'Yusei Magic'; src: url(../fonts/YuseiMagic.woff2); }
+@font-face { font-family: 'ZCOOL KuaiLe'; src: url(../fonts/ZCOOLKuaiLe.woff2); }
+.zh .yu, .zh .ju, .zh .cp { font-family: 'ZCOOL KuaiLe'; }
 html, body { margin: 0; }
 .og { position: relative; overflow: hidden; background: #1a100c; }
 .bg { position: absolute; inset: -40px; background: var(--shot) center 62% / cover; filter: blur(14px) brightness(.45) saturate(1.2); }
@@ -18,15 +20,16 @@ html, body { margin: 0; }
 .cp b { font-weight: 400; color: #ffd84d; } .cp i { font-style: normal; color: #ff7a5a; }
 </style></head><body>
 <div class="og"><div class="bg"></div><div class="glow"></div><div class="ph"></div>
-<div class="logo"><div class="yu"></div><div class="ju"></div><div class="cp"></div></div></div>
+<div class="logo"><div class="yu" data-zh="烤肉"></div><div class="ju" data-zh="滋滋"></div><div class="cp" data-zh="早了是<b>生</b>，晚了就<i>焦</i>。<br>点啥火候，就烤啥火候"></div></div></div>
 <script>
-const q = new URLSearchParams(location.search), W = +q.get('w') || 1200, H = +q.get('h') || 630, en = q.get('lang') === 'en';
+const q = new URLSearchParams(location.search), W = +q.get('w') || 1200, H = +q.get('h') || 630, en = q.get('lang') === 'en', zh = q.get('lang') === 'zh';
 const og = document.querySelector('.og'), ph = document.querySelector('.ph'), lg = document.querySelector('.logo'), gl = document.querySelector('.glow');
-og.style.setProperty('--shot', `url(shot-${en ? 'en' : 'ja'}.png)`); og.style.width = W + 'px'; og.style.height = H + 'px';
+og.style.setProperty('--shot', `url(shot-${en ? 'en' : zh ? 'zh' : 'ja'}.png)`); og.classList.toggle('zh', zh); og.style.width = W + 'px'; og.style.height = H + 'px';
 document.querySelector('.yu').textContent = en ? 'YAKINIKU' : '焼肉';
 document.querySelector('.ju').textContent = en ? 'JUU' : 'ジュー';
 document.querySelector('.cp').innerHTML = en ? 'Too early, <b>raw</b>. Too late, <i>burnt</i>.<br>Grill it right. Serve it fast.' : '早いと<b>生</b>、遅いと<i>焦げ</i>。<br>注文どおりに焼いて出せ';
 if (en) document.querySelector('.yu').style.letterSpacing = '.12em';
+if (zh) document.querySelectorAll('[data-zh]').forEach((el) => { el.innerHTML = el.dataset.zh; }); // 中国語：文は data-zh に書いてある（tools/fonts.py が字を拾う）
 const LW = Math.max(640, ...[...lg.children].map((c) => c.offsetLeft + c.scrollWidth + 30)); // ロゴと文の本当の幅
 const wide = W / H > 1.25;
 if (wide) { // 左にロゴ、右にスマホ

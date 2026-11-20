@@ -466,7 +466,7 @@
     if (b.includes('burnt')) return { text: jaen('片面コゲ', 'Half burnt'), kind: 'burnt' };
     const order = ['usu', 'hodo', 'kon'];
     const i0 = order.indexOf(b[0]), i1 = order.indexOf(b[1]);
-    return { text: BUCKET_NAME[order[Math.min(i0, i1)]] + jaen('〜', '-') + BUCKET_NAME[order[Math.max(i0, i1)]], kind: 'mix' };
+    return { text: BUCKET_NAME[order[Math.min(i0, i1)]] + jaen('〜', '-', '~') + BUCKET_NAME[order[Math.max(i0, i1)]], kind: 'mix' };
   }
 
   // ===== 時間を進める（main.js は 1/60 秒ずつ呼ぶ。dt を変えても結果がほぼ同じになるように書く） =====
@@ -650,20 +650,20 @@
   // 称号：その回に実際に起きたことから決める
   function title(g) {
     const st = g.stats;
-    if (st.char >= 2 || st.burnt + st.char >= 4) return { name: jaen('炭の錬金術師', 'Charcoal Alchemist'), why: jaen('焦がした肉 ' + (st.burnt + st.char) + '枚', 'Burned ' + (st.burnt + st.char)) };
-    if (st.raw + st.halfraw >= 3) return { name: jaen('生肉ソムリエ', 'Raw Meat Sommelier'), why: jaen('ナマで出した肉 ' + (st.raw + st.halfraw) + '枚', 'Served ' + (st.raw + st.halfraw) + ' raw') };
-    if (st.cold >= 2) return { name: jaen('冷めた関係', 'Cold Shoulder'), why: jaen('冷めた肉 ' + st.cold + '枚', st.cold + ' went cold') };
-    if (st.leave >= 3) return { name: jaen('閉店の達人', 'Closing Time Pro'), why: jaen('帰った客 ' + st.leave + '人', st.leave + ' walked out') };
+    if (st.char >= 2 || st.burnt + st.char >= 4) return { name: jaen('炭の錬金術師', 'Charcoal Alchemist'), why: jaen('焦がした肉 ' + (st.burnt + st.char) + '枚', 'Burned ' + (st.burnt + st.char), '烤焦了 ' + (st.burnt + st.char) + ' 片') };
+    if (st.raw + st.halfraw >= 3) return { name: jaen('生肉ソムリエ', 'Raw Meat Sommelier'), why: jaen('ナマで出した肉 ' + (st.raw + st.halfraw) + '枚', 'Served ' + (st.raw + st.halfraw) + ' raw', '端出生肉 ' + (st.raw + st.halfraw) + ' 片') };
+    if (st.cold >= 2) return { name: jaen('冷めた関係', 'Cold Shoulder'), why: jaen('冷めた肉 ' + st.cold + '枚', st.cold + ' went cold', '凉掉的肉 ' + st.cold + ' 片') };
+    if (st.leave >= 3) return { name: jaen('閉店の達人', 'Closing Time Pro'), why: jaen('帰った客 ' + st.leave + '人', st.leave + ' walked out', '气走客人 ' + st.leave + ' 位') };
     if (st.served === 0) return { name: jaen('ただ肉を眺める人', 'Professional Meat Watcher'), why: jaen('だれにも出さなかった', 'Fed nobody') };
-    if (st.perfect >= 5) return { name: jaen('神のトング', 'Tongs of God'), why: jaen('神焼き ' + st.perfect + '枚', st.perfect + ' Godly') };
+    if (st.perfect >= 5) return { name: jaen('神のトング', 'Tongs of God'), why: jaen('神焼き ' + st.perfect + '枚', st.perfect + ' Godly', '神级 ' + st.perfect + ' 片') };
     if (st.maxBusy >= 6 && st.great + st.perfect >= 6) return { name: jaen('網の支配者', 'Lord of the Grill'), why: jaen('6枚同時に焼いた', '6 on the grill at once') };
     if ((g.stats.vipWin || 0) >= 2) return { name: jaen('審査員キラー', 'Critic Killer'), why: jaen('審査員を2回うならせた', 'Wowed the critic twice') };
-    if (g.fevers >= 3) return { name: jaen('フィーバー職人', 'Fever Pro'), why: jaen('フィーバー ' + g.fevers + '回', g.fevers + ' Fevers') };
-    if (g.maxCombo >= 6) return { name: jaen('コンボ焼き師', 'Combo Cook'), why: jaen('最大 ' + g.maxCombo + 'コンボ', 'Best combo ' + g.maxCombo) };
-    if (g.score >= 2000) return { name: jaen('肉神', 'Meat Deity'), why: jaen(g.score + '点', g.score + ' pts') };
-    if (g.score >= 1100) return { name: jaen('焼肉の鬼', 'Yakiniku Demon'), why: jaen(g.score + '点', g.score + ' pts') };
-    if (g.score >= 400) return { name: jaen('町の焼き係', 'Neighborhood Griller'), why: jaen(g.score + '点', g.score + ' pts') };
-    return { name: jaen('見習いトング', 'Rookie Tongs'), why: jaen(g.score + '点', g.score + ' pts') };
+    if (g.fevers >= 3) return { name: jaen('フィーバー職人', 'Fever Pro'), why: jaen('フィーバー ' + g.fevers + '回', g.fevers + ' Fevers', '狂热 ' + g.fevers + ' 次') };
+    if (g.maxCombo >= 6) return { name: jaen('コンボ焼き師', 'Combo Cook'), why: jaen('最大 ' + g.maxCombo + 'コンボ', 'Best combo ' + g.maxCombo, '最高 ' + g.maxCombo + ' 连击') };
+    if (g.score >= 2000) return { name: jaen('肉神', 'Meat Deity'), why: jaen(g.score + '点', g.score + ' pts', g.score + ' 分') };
+    if (g.score >= 1100) return { name: jaen('焼肉の鬼', 'Yakiniku Demon'), why: jaen(g.score + '点', g.score + ' pts', g.score + ' 分') };
+    if (g.score >= 400) return { name: jaen('町の焼き係', 'Neighborhood Griller'), why: jaen(g.score + '点', g.score + ' pts', g.score + ' 分') };
+    return { name: jaen('見習いトング', 'Rookie Tongs'), why: jaen(g.score + '点', g.score + ' pts', g.score + ' 分') };
   }
 
   const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, starNeed, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
