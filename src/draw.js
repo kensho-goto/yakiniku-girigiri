@@ -284,7 +284,7 @@
   }
 
   // ===== 網と炭火 =====
-  const FIRE_LABEL = { strong: '強火', mid: '中火', weak: '弱火' };
+  const FIRE_LABEL = { strong: jaen('強火', 'High'), mid: jaen('中火', 'Med'), weak: jaen('弱火', 'Low') };
   const FIRE_FLAMES = { strong: 3, mid: 2, weak: 1 };
   function drawGrill(ctx, t, opts) {
     const G = L.grill;
@@ -407,7 +407,7 @@
     if (m.reserved) { // 出す予定の客：矢印で向きを見せる
       const tx = L.seatX[m.reserved.seat];
       const dir = tx < x - 20 ? '↖' : tx > x + 20 ? '↗' : '↑';
-      pill(ctx, x, y - r * 0.8 - 6, dir + ' 出す予定', '#ffe14d', '#3a1a00');
+      pill(ctx, x, y - r * 0.8 - 6, dir + jaen(' 出す予定', ' Up next'), '#ffe14d', '#3a1a00');
     }
     // 湯気＝温かさ
     const steam = m.rest && !m.restDone ? 1 : m.warm;
@@ -425,21 +425,25 @@
       ctx.strokeStyle = '#ff9b3d'; ctx.lineWidth = 5; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.arc(x, y, r + 8, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
       ctx.lineCap = 'butt';
-      pill(ctx, x, y + r - 2, '余熱中', '#ff9b3d', '#3a1a00');
+      pill(ctx, x, y + r - 2, jaen('余熱中', 'Resting'), '#ff9b3d', '#3a1a00');
     } else if (m.restDone) {
       // 余熱が終わった＝出せる。おいしいかは別に表示
       const lb = YG.label(m);
       const good = ['usu', 'hodo', 'kon', 'mix'].includes(lb.kind);
       let text = lb.text, bg = good ? '#fff3c4' : lb.kind === 'raw' ? '#ffb3c0' : '#555', fg = good ? '#4a2a10' : lb.kind === 'raw' ? '#7a0020' : '#fff';
-      if (m.warm < YG.CFG.warmCold) { text += '・冷めた'; bg = '#a9d6ff'; fg = '#0b2a4a'; }
-      else if (m.warm < YG.CFG.warmLuke) text += '・ぬるい';
+      // 英語は字が横に長く、となりの皿にかかる：「冷めた・ぬるい」は皿の上に分けて書く（出す予定の印と同じ場所。同時には出ない）
+      let warmText = '';
+      if (m.warm < YG.CFG.warmCold) { warmText = jaen('・冷めた', 'Cold'); bg = '#a9d6ff'; fg = '#0b2a4a'; }
+      else if (m.warm < YG.CFG.warmLuke) warmText = jaen('・ぬるい', 'Tepid');
+      if (warmText && !YI.en) { text += warmText; warmText = ''; }
       pill(ctx, x, y + r - 2, text, bg, fg, !good ? 'bad' : null);
+      if (warmText) pill(ctx, x, y - r * 0.8 - 6, warmText, m.warm < YG.CFG.warmCold ? '#a9d6ff' : '#fff3c4', fg);
     }
   }
   // 焼け具合のひとこと：箱に入れず、ふち文字（おいしい＝明るい黄、生＝桃、だめ＝灰、冷めた＝水色）
   function pill(ctx, x, y, text, bg, fg, mark) {
     const col = bg === '#a9d6ff' ? '#bfe4ff' : bg === '#ffb3c0' ? '#ff9db0' : bg === '#555' ? '#d0c8c0' : '#ffe58a';
-    say(ctx, (mark ? '× ' : '') + text, x, y + 5, 14, col, { lw: 4.5 });
+    say(ctx, (mark ? '× ' : '') + text, x, y + 5, jaen(14, 12.5), col, { lw: 4.5 }); // 英語は字が横に長いので少し小さく
   }
   // 焦げ・冷めた肉の「×」（タップで捨てる）
   function drawJunkBadge(ctx, x, y, t) {
@@ -463,7 +467,7 @@
     ctx.fillStyle = '#9aa3aa'; ctx.fillRect(-29, -28, 58, 8);
     ctx.fillStyle = '#222';
     for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(-14 + i * 9, -27, 6, 4, i, 0, 7); ctx.fill(); }
-    ctx.save(); ctx.rotate(-0.06); say(ctx, 'すてる', 0, 14, 14, '#f4f1ea', { lw: 4, stroke: '#3c4247' }); ctx.restore();
+    ctx.save(); ctx.rotate(-0.06); say(ctx, jaen('すてる', 'TOSS'), 0, 14, 14, '#f4f1ea', { lw: 4, stroke: '#3c4247' }); ctx.restore();
     ctx.restore();
   }
   const UNLOCK_AT = { kalbi: 2, harami: 5 }; // ステージで使えるようになる肉
@@ -510,7 +514,7 @@
       // 盆に焼印で書いたような名前
       ctx.fillStyle = open ? 'rgba(58,28,8,0.92)' : 'rgba(58,28,8,0.45)'; ctx.textAlign = 'center';
       ctx.font = `${special ? 14 : 17}px "Yusei Magic", "Hiragino Sans", sans-serif`;
-      ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 36);
+      ctx.fillText(YG.TYPES[type].name, x, y + 36);
       if (special && open) say(ctx, '×' + toku, x + 30, y - 22, 16, '#ffe58a', { big: true, lw: 4 });
       if (!open) { // 鍵。開くステージの数字を鍵に書く
         ctx.save(); ctx.lineJoin = 'round';
@@ -588,7 +592,7 @@
       ctx.beginPath(); ctx.moveTo(x - 30, y + 28); ctx.lineTo(x + 34, L.counterY + 4); ctx.stroke();
       ctx.restore();
       ctx.save(); ctx.translate(x + 2, y + 44); ctx.rotate(0.6);
-      ctx.fillStyle = '#5a3a00'; ctx.font = '8px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('審査員', 0, 3);
+      ctx.fillStyle = '#5a3a00'; ctx.font = '8px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(jaen('審査員', 'CRITIC'), 0, 3);
       ctx.restore();
     }
     // 頭
@@ -621,7 +625,7 @@
       ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(-5, -3, 5, 4, 0.3, 0, 7); ctx.fill();
       ctx.fillStyle = '#f4b6c2'; ctx.beginPath(); ctx.ellipse(0, 6, 8, 5, 0, 0, 7); ctx.fill();
       ctx.fillStyle = '#222'; ctx.fillRect(-3, 4, 2, 3); ctx.fillRect(2, 4, 2, 3);
-      say(ctx, 'モー', 14, -6, 14, '#fff', { align: 'left', lw: 4 });
+      say(ctx, jaen('モー', 'MOO'), 14, -6, 14, '#fff', { align: 'left', lw: 4 });
       ctx.restore();
     }
     ctx.restore();
@@ -764,7 +768,7 @@
     ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = opts && opts.target ? '#ffcf1f' : c.vip ? `rgba(196,150,30,${0.75 + 0.25 * Math.sin(t * 8)})` : '#2a1206'; ctx.stroke();
     ctx.fillStyle = c.vip ? '#fff0b8' : '#fffaf0'; ctx.fill();
     if (opts && opts.target) { ctx.lineWidth = 1.5; ctx.strokeStyle = '#2a1206'; blob(ctx, x, y, w + 7, h + 7, i + 1, 0); ctx.stroke(); }
-    if (c.vip) say(ctx, '点×' + YG.CFG.vipMult, x + 44, y + h / 2 + 18, 15, '#ffd84d', { big: true, lw: 4.5 });
+    if (c.vip) say(ctx, jaen('点×', 'pts×') + YG.CFG.vipMult, x + 44, y + h / 2 + 18, 15, '#ffd84d', { big: true, lw: 4.5 });
     // 焼き色の見本（どの肉でも同じ目安として、カルビで見せる）
     drawMeat(ctx, sampleMeat(c.order.target), x - 31, y - 7, { scale: 0.44 });
     ctx.fillStyle = '#2a1a10'; ctx.textAlign = 'center';
@@ -772,7 +776,7 @@
     ctx.fillText(YG.TARGET_NAME[c.order.target], x + 20, y - 4);
     ctx.font = '13.5px "Yusei Magic", "Hiragino Sans", sans-serif';
     ctx.fillStyle = ctx.strokeStyle = c.order.type ? '#a3261b' : '#5a4a3a'; ctx.lineWidth = 0.7;
-    const tyText = c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : 'なんでも';
+    const tyText = c.order.type ? (c.order.type === 'toku' ? jaen('特上で', 'Prime') : jaen(YG.TYPES[c.order.type].name + 'で', YG.TYPES[c.order.type].name)) : jaen('なんでも', 'Any meat');
     ctx.strokeText(tyText, x + 21, y + 13); ctx.fillText(tyText, x + 21, y + 13);
 
     if (k < 0.15) { // もう帰る：頭の左上に赤い「！」
@@ -834,6 +838,11 @@
   }
   function wrap(ctx, text, w) {
     const out = []; let cur = '';
+    if (root.YI && root.YI.en) { // 英語：単語の切れ目で折り返す
+      for (const word of text.split(' ')) { const tt = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(tt).width > w) { out.push(cur); cur = word; } else cur = tt; }
+      if (cur) out.push(cur);
+      return out.slice(0, 4);
+    }
     // 行のはじめに「！」「。」などが来ないようにする（前の行にぶら下げる）
     for (const ch of text) { if (ctx.measureText(cur + ch).width > w && !'！？。、…）」!?ー'.includes(ch)) { out.push(cur); cur = ch; } else cur += ch; }
     if (cur) out.push(cur);

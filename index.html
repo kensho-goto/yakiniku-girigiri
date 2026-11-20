@@ -22,7 +22,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
-<title>ジュー｜焼肉の焼き加減クソゲー</title>
+<title data-en="JUU — the yakiniku doneness game">ジュー｜焼肉の焼き加減クソゲー</title>
 <link rel="preload" href="fonts/PottaOne.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/YuseiMagic.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -293,6 +293,11 @@
   .pt-thanks { text-shadow: var(--o2); }
   #rotate { text-shadow: var(--o2); font-weight: 400; }
   #rotate .ph { border-color: #ffd84d; border-radius: 10px 12px 9px 13px; box-shadow: 0 0 0 3px var(--ink); }
+  /* 英語：ロゴの「YAKINIKU」は字の間を詰める。ことばの切りかえは小さめ */
+  #title .tiny.lang { font-size: 14px; color: #ffd84d; }
+  html[lang=en] #title .logo small { letter-spacing: .12em; }
+  html[lang=en] .r-kikaku .rk { font-size: 30px; }
+  html[lang=en] .boss .say { font-size: 14.5px; }
 </style>
 </head>
 <body>
@@ -303,35 +308,35 @@
 <div class="overlay" id="title">
  <div id="titleFrame">
   <div class="tband">
-    <h1 class="logo"><small>焼肉</small>ジュー</h1>
+    <h1 class="logo" data-en="<small>YAKINIKU</small>JUU"><small>焼肉</small>ジュー</h1>
     <div class="best" id="titleBest"></div>
   </div>
   <div class="card">
     <div class="stage-next" id="titleStage"></div>
-    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前。あだ名でいい"></div>
-    <div class="tboss"><span>へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
+    <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前。あだ名でいい" data-en-ph="Your name. A nickname works"></div>
+    <div class="tboss"><span data-en="Hey, welcome in!">へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
     <button class="btn" id="startBtn">焼く</button>
-    <button class="tiny" id="stageBtn">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button>
-    <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから">次の人に渡す</button>
+    <button class="tiny" id="stageBtn" data-en="Stages">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button><button class="tiny lang" id="langBtn" data-en="日本語">English</button>
+    <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから" data-en-title="Wipe the name and records, start fresh" data-en="Next player">次の人に渡す</button>
   </div>
  </div>
 </div>
 
 <div class="overlay dim" id="stages" hidden>
   <div class="card">
-    <h1 class="logo" style="font-size:32px">ステージ</h1>
+    <h1 class="logo" style="font-size:32px" data-en="Stages">ステージ</h1>
     <div class="slist" id="stageList"></div>
-    <button class="tiny" id="lvBtn">腕前をえらびなおす</button>
-    <button class="btn2 back" id="stagesClose">もどる</button>
+    <button class="tiny" id="lvBtn" data-en="Pick your skill again">腕前をえらびなおす</button>
+    <button class="btn2 back" id="stagesClose" data-en="Back">もどる</button>
   </div>
 </div>
 
 <div class="overlay dim" id="tools" hidden>
   <div class="card">
-    <h1 class="logo" style="font-size:32px">道具</h1>
+    <h1 class="logo" style="font-size:32px" data-en="Tools">道具</h1>
     <div class="boss" id="toolBoss"></div><div class="lvbox" id="toolInfo"></div>
     <div class="slist" id="toolList"></div>
-    <button class="btn2 back" id="toolsClose">もどる</button>
+    <button class="btn2 back" id="toolsClose" data-en="Back">もどる</button>
   </div>
 </div>
 
@@ -339,8 +344,8 @@
   <div class="card">
     <div class="boss" id="levelBoss"></div>
     <div class="slist" id="levelList"></div>
-    <p class="sub" style="font-size:13px">あとから「ステージをえらぶ」で変えられる</p>
-    <button class="btn2 back" id="levelsClose">もどる</button>
+    <p class="sub" style="font-size:13px" data-en="You can change this later in Stages">あとから「ステージをえらぶ」で変えられる</p>
+    <button class="btn2 back" id="levelsClose" data-en="Back">もどる</button>
   </div>
 </div>
 
@@ -350,18 +355,18 @@
     <h1 class="logo" style="font-size:36px" id="introName"></h1>
     <ul class="intro-list" id="introList"></ul><div class="boss" id="introBoss"></div>
     <div class="goal" id="introGoal"></div>
-    <button class="btn" id="introGo">焼く！</button>
+    <button class="btn" id="introGo" data-en="GRILL!">焼く！</button>
   </div>
 </div>
 
 <div class="overlay dim" id="pause" hidden>
   <div class="card">
-    <h1 class="logo" style="font-size:38px">ひと休み</h1>
-    <p class="sub">火も時間も止まっています</p>
-    <button class="btn" id="resumeBtn">つづける</button>
-    <button class="btn2" id="retryBtn">はじめから</button>
-    <button class="btn2" id="toTitleBtn">タイトルへ</button>
-    <a class="tiny about" href="about.html">このゲームについて</a>
+    <h1 class="logo" style="font-size:38px" data-en="Break">ひと休み</h1>
+    <p class="sub" data-en="The fire and the clock are frozen">火も時間も止まっています</p>
+    <button class="btn" id="resumeBtn" data-en="Resume">つづける</button>
+    <button class="btn2" id="retryBtn" data-en="Restart">はじめから</button>
+    <button class="btn2" id="toTitleBtn" data-en="Title">タイトルへ</button>
+    <a class="tiny about" href="about.html" id="aboutLink" data-en="About this game">このゲームについて</a>
   </div>
 </div>
 
@@ -374,22 +379,23 @@
     <div id="rNew"></div>
     <div class="best" id="rBest" style="margin-top:2px"></div>
     <button class="btn" id="againBtn">もう一回</button>
-    <div><button class="btn2 share" id="rShare">自慢する</button></div>
-    <div><button class="btn2" id="rRetry" hidden>もう一回</button><button class="btn2" id="rStages" hidden>ステージをえらぶ</button><button class="btn2" id="rTitleBtn">タイトルへ</button></div>
+    <div><button class="btn2 share" id="rShare" data-en="Brag">自慢する</button></div>
+    <div><button class="btn2" id="rRetry" hidden data-en="Again">もう一回</button><button class="btn2" id="rStages" hidden data-en="Stages">ステージをえらぶ</button><button class="btn2" id="rTitleBtn" data-en="Title">タイトルへ</button></div>
     <div class="lvbox" id="rLevel"></div>
     <div class="lessons" id="rLessons"></div>
     <div class="pt" id="ptFeedback" hidden></div>
-    <div class="title">今日の称号<b id="rTitle"></b><span id="rWhy"></span></div>
+    <div class="title"><span data-en="Today's title">今日の称号</span><b id="rTitle"></b><span id="rWhy"></span></div>
     <div class="stats" id="rStats"></div>
-    <button class="btn2" id="ptNextResult" hidden>次の人に渡す</button>
+    <button class="btn2" id="ptNextResult" hidden data-en="Next player">次の人に渡す</button>
   </div>
 </div>
 
 <div class="overlay" id="rotate" hidden>
   <div class="ph"></div>
-  スマホを縦にしてね
+  <span data-en="Turn your phone upright">スマホを縦にしてね</span>
 </div>
 
+<script src="src/i18n.js?v=dev"></script>
 <script src="src/sim.js?v=dev"></script>
 <script src="src/lines.js?v=dev"></script>
 <script src="src/draw.js?v=dev"></script>
