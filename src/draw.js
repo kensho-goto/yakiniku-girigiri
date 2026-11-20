@@ -365,8 +365,11 @@
   const FIRE_COLOR = { strong: '#ff6a3a', mid: '#ffc23d', weak: '#8fc3ff' };
   function drawFireTags(ctx, fires) {
     const G = L.grill;
+    // 火が全部同じ強さ（ステージ1〜3）なら、札は何も伝えないので出さない
+    const names = [0, 1, 2].map((c) => YG.fireName(c, fires));
+    if (names.every((n) => n === names[0])) return;
     for (let c = 0; c < 3; c++) {
-      const fn = YG.fireName(c, fires);
+      const fn = names[c];
       const x = L.slotX[c], y = G.y + 14;
       const nf = FIRE_FLAMES[fn];
       for (let i = 0; i < nf; i++) drawFlame(ctx, x - 24 + i * 10, y + 8, 5, 14, 1);
