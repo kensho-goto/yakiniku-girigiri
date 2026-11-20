@@ -37,7 +37,7 @@
   }
   // 次の人に渡す：名前・自己ベスト・説明済み・感想済みを消して、はじめから
   function nextPerson() {
-    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb', 'yaki.stars', 'yaki.seen', 'yaki.stageBest', 'yaki.stageBestN', 'yaki.from', 'yaki.exp', 'yaki.tools'].forEach(ls.del);
+    ['yaki.name', 'yaki.best', 'yaki.bestRank', 'yaki.tut', 'yaki.plays', 'yaki.fb', 'yaki.stars', 'yaki.seen', 'yaki.stageBest', 'yaki.stageBestN', 'yaki.from', 'yaki.exp', 'yaki.tools', 'yaki.daily'].forEach(ls.del);
     ls.set('yaki.pid', newId());
     location.reload();
   }
