@@ -580,6 +580,49 @@
     }
     ctx.restore();
   }
+  // 店長：ねじり鉢巻・紺の作務衣・ひげ。お客と同じ描き方（平たい形）
+  // mood：say（話す）・grin（ほめる）・hmm（むっ）
+  function drawBoss(ctx, x, y, mood, t) {
+    t = t || 0; mood = mood || 'say';
+    ctx.save();
+    // 体（作務衣）
+    ctx.fillStyle = '#22314a';
+    ctx.beginPath(); ctx.moveTo(x - 50, y + 84); ctx.quadraticCurveTo(x - 48, y + 30, x, y + 28); ctx.quadraticCurveTo(x + 48, y + 30, x + 50, y + 84); ctx.fill();
+    ctx.strokeStyle = '#f4efe6'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 16, y + 30); ctx.lineTo(x + 4, y + 66); ctx.moveTo(x + 16, y + 30); ctx.lineTo(x + 2, y + 50); ctx.stroke();
+    // 首にタオル
+    ctx.fillStyle = '#e9e3d6'; ctx.beginPath(); ctx.ellipse(x - 26, y + 40, 9, 16, 0.35, 0, 7); ctx.fill();
+    // 頭
+    const r = 30;
+    ctx.fillStyle = '#efc296'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - r + 1, y + 4, 6, 8, 0, 0, 7); ctx.ellipse(x + r - 1, y + 4, 6, 8, 0, 0, 7); ctx.fill(); // 耳
+    // 刈り上げの髪
+    ctx.fillStyle = '#1c1612';
+    ctx.beginPath(); ctx.arc(x, y - 2, r + 1, Math.PI * 1.02, Math.PI * 1.98); ctx.lineTo(x + r - 2, y - 8); ctx.lineTo(x - r + 2, y - 8); ctx.closePath(); ctx.fill();
+    // ねじり鉢巻（白と赤のねじれ）＋ 結び目
+    ctx.fillStyle = '#f7f2ea'; ctx.beginPath(); ctx.moveTo(x - r - 2, y - 12); ctx.quadraticCurveTo(x, y - 20, x + r + 2, y - 12); ctx.lineTo(x + r + 1, y - 2); ctx.quadraticCurveTo(x, y - 10, x - r - 1, y - 2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#d23a2a'; ctx.lineWidth = 3; ctx.lineCap = 'butt';
+    for (let k = -r + 4; k < r; k += 9) { ctx.beginPath(); ctx.moveTo(x + k, y - 3 - 7 * (1 - (k / r) ** 2)); ctx.lineTo(x + k + 6, y - 14 - 6 * (1 - (k / r) ** 2)); ctx.stroke(); }
+    ctx.fillStyle = '#f7f2ea'; ctx.beginPath(); ctx.ellipse(x + r - 2, y - 9, 7, 6, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + r + 2, y - 8); ctx.lineTo(x + r + 18, y - 18 + Math.sin(t * 6) * 2); ctx.lineTo(x + r + 14, y - 4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#d23a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + r + 6, y - 12); ctx.lineTo(x + r + 12, y - 8); ctx.stroke();
+    // まゆ
+    ctx.strokeStyle = '#1c1612'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    const lift = mood === 'hmm' ? 4 : 0;
+    ctx.beginPath(); ctx.moveTo(x - 17, y + 3 - (mood === 'grin' ? 2 : 0)); ctx.lineTo(x - 6, y + 1 + (mood === 'hmm' ? 2 : 0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 6, y + 1 - lift); ctx.lineTo(x + 17, y + 3 - lift - (mood === 'grin' ? 2 : 0)); ctx.stroke();
+    // 目
+    ctx.fillStyle = '#1c1612';
+    if (mood === 'grin') { ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x - 11, y + 11, 4, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x + 11, y + 11, 4, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(x - 11, y + 10, 3, 0, 7); ctx.arc(x + 11, y + 10, 3, 0, 7); ctx.fill(); }
+    // ひげ
+    ctx.beginPath(); ctx.moveTo(x, y + 17); ctx.quadraticCurveTo(x - 12, y + 15, x - 15, y + 22); ctx.quadraticCurveTo(x - 6, y + 20, x, y + 21); ctx.quadraticCurveTo(x + 6, y + 20, x + 15, y + 22); ctx.quadraticCurveTo(x + 12, y + 15, x, y + 17); ctx.fill();
+    // 口
+    if (mood === 'grin') { ctx.fillStyle = '#7a1e14'; ctx.beginPath(); ctx.arc(x, y + 23, 7, 0, Math.PI); ctx.fill(); }
+    else if (mood === 'hmm') { ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 5, y + 26); ctx.lineTo(x + 5, y + 25); ctx.stroke(); }
+    else { const o = 2.5 + Math.abs(Math.sin(t * 9)) * 2.5; ctx.fillStyle = '#7a1e14'; ctx.beginPath(); ctx.ellipse(x, y + 25, 4, o, 0, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
   function snow(ctx, x, y, r) {
     for (let a = 0; a < 3; a++) { const an = a * Math.PI / 3; ctx.beginPath(); ctx.moveTo(x - Math.cos(an) * r, y - Math.sin(an) * r); ctx.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); ctx.stroke(); }
   }
@@ -768,5 +811,5 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, say, blob, };
+  root.YD = { L, W, H, drawMeat, drawBackground, drawGrill, drawFireTags, drawPlate, drawTrash, drawJunkBadge, drawTray, drawCustomer, drawOrder, drawReact, drawFlame, roundRect, meatColor, trayMeat, rgb, mix, pill, say, blob, drawBoss, sampleMeat, };
 })(window);
