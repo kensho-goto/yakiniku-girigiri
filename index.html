@@ -72,13 +72,24 @@
     text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
   #title .badge { margin-left: 0; padding: 0; background: none; border-radius: 0; font-size: inherit; color: #ff8a5a; vertical-align: 0; }
   /* 今日の網：焼くの下。日付とお題を焼印のような色で */
-  #title .daily { display: block; margin: 8px auto 4px; padding: 0 4px; background: none; border: 0; cursor: pointer; font-family: var(--num); font-size: 21px; line-height: 1.15; color: #ff9b5a; transform: rotate(-2deg);
+  #title .daily { display: block; max-width: calc(100% - 170px); margin: 8px auto 4px; padding: 0 4px; background: none; border: 0; cursor: pointer; font-family: var(--num); font-size: 21px; line-height: 1.15; color: #ff9b5a; transform: rotate(-2deg);
     text-shadow: -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 4px 0 var(--ink); }
   #title .daily[hidden] { display: none; }
-  #title .daily small { font-size: 16px; color: #ffe2bf; }
-  #title .daily b { font-weight: 400; color: #ffd84d; }
+  #title .daily small { display: block; font-size: 15px; color: #ff9b5a; }
+  #title .daily b { display: block; font-weight: 400; color: #ffd84d; }
   #title .daily .db { display: block; font-family: var(--hand); font-size: 13px; color: #ffe2bf; }
   #title .daily:active { transform: rotate(-2deg) translateY(3px) scale(.96); }
+  /* 右下：ステージと道具は絵のボタン（左下の店長と対になる） */
+  #title .tside { position: absolute; right: 4px; bottom: 6px; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  #title .tpic { position: relative; display: block; width: 84px; padding: 0; background: none; border: 0; cursor: pointer; color: #ffe2bf; font-size: 15px; line-height: 1; white-space: nowrap;
+    text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
+  #title .tpic img { display: block; width: 64px; height: 47px; margin: 0 auto -2px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.45)); }
+  #title .tpic:nth-child(1) img { transform: rotate(-6deg); } #title .tpic:nth-child(2) img { transform: rotate(5deg); }
+  #title .tpic:active { transform: translateY(3px) scale(.94); }
+  /* 道具を強くできるとき：焦げ跡のような赤い印 */
+  #title .tpic.has::after { content: '!'; position: absolute; right: 6px; top: -2px; width: 22px; height: 22px; line-height: 22px; text-align: center; font-family: var(--num); font-size: 15px; color: #fff;
+    background: #e8402a; border: 3px solid var(--ink); border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%; text-shadow: none; animation: yaku 1.4s ease-in-out infinite; }
+  #title .tpic.has span { color: #ffd84d; }
   #title .card { pointer-events: none; } #title .card > * { pointer-events: auto; }
   #title .tboss { position: absolute; left: 6px; bottom: 34px; width: 92px; pointer-events: none; }
   #title .tboss img { width: 92px; display: block; }
@@ -348,7 +359,7 @@
     <div class="tboss"><span data-en="Hey, welcome in!">へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
     <button class="btn" id="startBtn">焼く</button>
     <button class="daily" id="dailyBtn" type="button" hidden></button>
-    <button class="tiny" id="stageBtn" data-en="Stages">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button>
+    <div class="tside"><button class="tpic" id="stageBtn" type="button"><img id="stagePic" alt=""><span data-en="Stages" data-zh="选关">ステージ</span></button><button class="tpic" id="toolBtn" type="button"><img id="toolPic" alt=""><span id="toolLabel">道具</span></button></div>
     <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから" data-en-title="Wipe the name and records, start fresh" data-en="Next player">次の人に渡す</button>
   </div>
  </div>
