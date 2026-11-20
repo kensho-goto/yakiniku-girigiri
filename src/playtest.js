@@ -3,6 +3,7 @@
 (function (root) {
   'use strict';
   const $ = (id) => document.getElementById(id);
+  const jaen = root.jaen || ((ja) => ja);
   let on = false;
   const ls = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -67,7 +68,7 @@
     canStart() {
       if (!on || name()) return true;
       const input = $('ptName');
-      input.classList.add('need'); input.placeholder = '名前を入れてね。あだ名でいい'; input.focus();
+      input.classList.add('need'); input.placeholder = jaen('名前を入れてね。あだ名でいい', 'Name first. A nickname works'); input.focus();
       return false;
     },
     start(g) { if (!on) return; playNo++; startedAt = Date.now(); send('start', { playNo, stage: g.stage || 0, tutorial: !!g.tutorial }); },
@@ -84,15 +85,15 @@
   };
 
   // 結果画面の「どうだった？」
-  const FACES = [['again', '😆', 'またやりたい'], ['ok', '🙂', 'まあまあ'], ['confused', '😵', 'わかりにくい'], ['bored', '😴', 'つまらない']];
+  const FACES = [['again', '😆', jaen('またやりたい', 'Again!')], ['ok', '🙂', jaen('まあまあ', 'So-so')], ['confused', '😵', jaen('わかりにくい', 'Confusing')], ['bored', '😴', jaen('つまらない', 'Boring')]];
   function showFeedback(fbBefore) {
     const box = $('ptFeedback');
     let pick = null;
     box.hidden = false;
-    box.innerHTML = `<div class="pt-q">${fbBefore ? '何回か遊んでみて、どう？' : 'どうだった？'}</div>` +
+    box.innerHTML = `<div class="pt-q">${fbBefore ? jaen('何回か遊んでみて、どう？', 'Played a few. Verdict?') : jaen('どうだった？', 'How was it?')}</div>` +
       '<div class="pt-faces">' + FACES.map(([k, e, t]) => `<button data-k="${k}"><span>${e}</span>${t}</button>`).join('') + '</div>' +
-      '<textarea id="ptText" rows="2" placeholder="ひとこと。どこで笑った？ どこで困った？"></textarea>' +
-      '<button class="btn2 pt-send" disabled>送る</button>';
+      `<textarea id="ptText" rows="2" placeholder="${jaen('ひとこと。どこで笑った？ どこで困った？', 'A word or two. What got a laugh? Where did you get stuck?')}"></textarea>` +
+      `<button class="btn2 pt-send" disabled>${jaen('送る', 'Send')}</button>`;
     const btns = box.querySelectorAll('.pt-faces button');
     const sendBtn = box.querySelector('.pt-send');
     const text = box.querySelector('textarea');
@@ -105,7 +106,7 @@
     sendBtn.onclick = () => {
       send('feedback', Object.assign({ face: pick, text: text.value.trim().slice(0, 500), round: fbBefore + 1 }, lastEnd));
       ls.set('yaki.fb', String(fbBefore + 1));
-      box.innerHTML = '<div class="pt-thanks">ありがとう！ もう一回もどうぞ</div>';
+      box.innerHTML = `<div class="pt-thanks">${jaen('ありがとう！ もう一回もどうぞ', 'Thanks! Go again!')}</div>`;
     };
   }
 

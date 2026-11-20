@@ -3,6 +3,8 @@
 // 見た目と採点は、どちらもこのファイルの状態（meat.side / meat.warm など）だけを見る。
 (function (root) {
   'use strict';
+  // ことば：ブラウザでは i18n.js の jaen。node（テスト）では いつも日本語
+  const jaen = typeof root.jaen === 'function' ? root.jaen : (ja) => ja;
 
   // ===== 調整する数字はここにまとめる =====
   const CFG = {
@@ -53,27 +55,27 @@
     lastArriveGap: [0.3, 0.9],
     // ランク（売上で決まる）。特選A5・規格外は shopRank() で決める
     ranks: [
-      { key: 'C', min: 0, word: 'スーパーの見切り品' },
-      { key: 'B', min: 300, word: '町の焼肉屋' },
-      { key: 'A3', min: 700, word: 'ちょっといい店' },
-      { key: 'A4', min: 1100, word: '予約がとれない店' },
-      { key: 'A5', min: 1600, word: '霜降りの神' },
+      { key: 'C', min: 0, word: jaen('スーパーの見切り品', 'Bargain bin') },
+      { key: 'B', min: 300, word: jaen('町の焼肉屋', 'Local joint') },
+      { key: 'A3', min: 700, word: jaen('ちょっといい店', 'Kinda fancy') },
+      { key: 'A4', min: 1100, word: jaen('予約がとれない店', 'Booked solid') },
+      { key: 'A5', min: 1600, word: jaen('霜降りの神', 'God of marbling') },
     ],
   };
 
   // 肉の種類。rate＝下の面の焼ける速さ、through＝上の面に伝わる割合、carry＝余熱の大きさ、
   // rest＝余熱の秒数、cool＝余熱のあと冷めきるまでの秒数、strongBoost＝強火で脂が燃える倍率
   const TYPES = {
-    tan: { name: 'タン', rate: 0.26, through: 0.18, carry: 0.045, rest: 1.5, cool: 8, strongBoost: 1.0, thick: 3 },
-    kalbi: { name: 'カルビ', rate: 0.15, through: 0.12, carry: 0.07, rest: 2.0, cool: 10, strongBoost: 1.2, thick: 6 },
-    harami: { name: 'ハラミ', rate: 0.1, through: 0.08, carry: 0.12, rest: 2.8, cool: 12, strongBoost: 1.0, thick: 11 },
+    tan: { name: jaen('タン', 'Tongue'), rate: 0.26, through: 0.18, carry: 0.045, rest: 1.5, cool: 8, strongBoost: 1.0, thick: 3 },
+    kalbi: { name: jaen('カルビ', 'Kalbi'), rate: 0.15, through: 0.12, carry: 0.07, rest: 2.0, cool: 10, strongBoost: 1.2, thick: 6 },
+    harami: { name: jaen('ハラミ', 'Harami'), rate: 0.1, through: 0.08, carry: 0.12, rest: 2.8, cool: 12, strongBoost: 1.0, thick: 11 },
     // 審査員が来たときだけ置ける。脂が多く、速く焼けて、強火でよく燃える
-    toku: { name: '特上カルビ', rate: 0.19, through: 0.12, carry: 0.08, rest: 1.8, cool: 8, strongBoost: 1.3, thick: 7, special: true },
+    toku: { name: jaen('特上カルビ', 'Prime Kalbi'), rate: 0.19, through: 0.12, carry: 0.08, rest: 1.8, cool: 8, strongBoost: 1.3, thick: 7, special: true },
   };
   const TRAY_KEYS = ['tan', 'kalbi', 'harami', 'toku'];
   const TYPE_KEYS = ['tan', 'kalbi', 'harami'];
   const TARGET_KEYS = ['usu', 'hodo', 'kon'];
-  const TARGET_NAME = { usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり' };
+  const TARGET_NAME = { usu: jaen('うす焼き', 'Rare'), hodo: jaen('ほどよく', 'Medium'), kon: jaen('こんがり', 'Crispy') };
   const RANKS = ['perfect', 'great', 'good', 'meh', 'miss'];
 
   // ===== ステージ：1つずつ覚えることを足していく =====
@@ -86,32 +88,32 @@
   };
   // stars：★1（＝目標）・★2・★3 に要る「うまく焼けた枚数」
   const STAGES = [
-    { name: '屋台', learn: '置いて、返して、出す',
-      intro: ['まずはタンを網へ置いてみな。', '肉汁が浮いたら、タップで返す。', '両面焼けたら皿へ。そして客へ。'],
+    { name: jaen('屋台', 'Street Stall'), learn: jaen('置いて、返して、出す', 'Drop it, flip it, serve it'),
+      intro: jaen(['まずはタンを網へ置いてみな。', '肉汁が浮いたら、タップで返す。', '両面焼けたら皿へ。そして客へ。'], ['Slap some Tongue on the grill.', 'Juice on top? Tap to flip it.', 'Both sides done? Plate it, then feed the customer.']),
       rule: { arriveGap: [4, 6], duration: 45, seats: 1, types: ['tan'], targets: ['hodo'], anyRate: 0, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 2, patience: [40, 34], firstArrivals: [0] },
       stars: [2, 4, 5] },
-    { name: '裏を読む', learn: '肉汁と煙で、見えない裏を読む',
-      intro: ['見えるのは上の面だけだ。', '肉汁が浮いたら、下は焼けてる。', '煙が出たら、下が焦げはじめだ。'],
+    { name: jaen('裏を読む', 'Read the Bottom'), learn: jaen('肉汁と煙で、見えない裏を読む', 'Juice and smoke tell you the hidden side'),
+      intro: jaen(['見えるのは上の面だけだ。', '肉汁が浮いたら、下は焼けてる。', '煙が出たら、下が焦げはじめだ。'], ['You only see the top side.', "Juice on top? Bottom's done.", "Smoke? The bottom's burning."]),
       rule: { arriveGap: [4, 6], duration: 45, seats: 2, types: ['tan', 'kalbi'], targets: ['hodo'], anyRate: 0.3, fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.6, patience: [36, 30], firstArrivals: [0, 8] },
       stars: [2, 5, 8] },
-    { name: '好みを聞く', learn: '客ごとに焼き加減がちがう',
-      intro: ['客ごとに好みがちがうんだ。', '吹き出しの焼き色に合わせな。', '焼きすぎたら、こんがり好きへ回せ。'],
+    { name: jaen('好みを聞く', 'Take Orders'), learn: jaen('客ごとに焼き加減がちがう', 'Everybody wants it different'),
+      intro: jaen(['客ごとに好みがちがうんだ。', '吹き出しの焼き色に合わせな。', '焼きすぎたら、こんがり好きへ回せ。'], ['Everybody likes it different.', "Match the color they asked for.", 'Overdid it? Give it to a Crispy fan.']),
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fires: MID, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.4, patience: [32, 26], firstArrivals: [0, 8] },
       stars: [2, 3, 5] },
-    { name: '火を使い分ける', learn: '強火と弱火を使い分ける',
-      intro: ['列ごとに火の強さがちがう。', '強火は速いが、すぐ焦げる。', '焦げそうなら弱火へ逃がせ。'],
+    { name: jaen('火を使い分ける', 'Work the Fire'), learn: jaen('強火と弱火を使い分ける', 'Juggle high and low heat'),
+      intro: jaen(['列ごとに火の強さがちがう。', '強火は速いが、すぐ焦げる。', '焦げそうなら弱火へ逃がせ。'], ['Each column burns different.', 'High heat is fast. Burns fast.', 'Burning? Run it to low heat.']),
       rule: { arriveGap: [3.5, 5.5], duration: 60, seats: 2, types: ['tan', 'kalbi'], fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, coolMul: 1.2, patience: [30, 24], firstArrivals: [0, 8] },
       stars: [2, 3, 5] },
-    { name: '余熱を読む', learn: '上げたあとも焼ける',
-      intro: ['皿に上げても、まだ焼ける。余熱だ。', '厚いハラミと強火の肉ほど進む。', 'ねらいの少し手前で上げな。'],
+    { name: jaen('余熱を読む', 'Carryover Heat'), learn: jaen('上げたあとも焼ける', 'It keeps cooking on the plate'),
+      intro: jaen(['皿に上げても、まだ焼ける。余熱だ。', '厚いハラミと強火の肉ほど進む。', 'ねらいの少し手前で上げな。'], ["On the plate it keeps cooking. That's carryover.", 'Thick Harami and high-heat meat go furthest.', 'Pull it a hair early.']),
       rule: { arriveGap: [3, 5], duration: 60, seats: 3, fever: false, busy: false, vip: false, lastOrder: false, meatCost: false, patience: [30, 22] },
       stars: [2, 5, 7] },
-    { name: '満席', learn: 'たくさん焼いて、フィーバー',
-      intro: ['同時にたくさん焼くほど点が増える。', 'うまいを続けるとフィーバー。点が2倍だ。', '捨てた肉と残した肉は、肉代を引くぞ。'],
+    { name: jaen('満席', 'Full House'), learn: jaen('たくさん焼いて、フィーバー', 'Pile it on. Hit Fever'),
+      intro: jaen(['同時にたくさん焼くほど点が増える。', 'うまいを続けるとフィーバー。点が2倍だ。', '捨てた肉と残した肉は、肉代を引くぞ。'], ['More meat at once, more points.', 'Keep it Tasty to hit Fever.', 'Fever means double points.', 'Tossed or leftover meat? You pay.']),
       rule: { arriveGap: [2.5, 4.5], vip: false },
       stars: [3, 6, 9] },
-    { name: '審査員', learn: '特上カルビで点が3倍',
-      intro: ['審査員が来たら、特上カルビを焼け。', '好みどおりなら点が3倍だ。', '残り15秒はラストオーダーだ。'],
+    { name: jaen('審査員', 'The Critic'), learn: jaen('特上カルビで点が3倍', 'Prime Kalbi, triple points'),
+      intro: jaen(['審査員が来たら、特上カルビを焼け。', '好みどおりなら点が3倍だ。', '残り15秒はラストオーダーだ。'], ['Critic shows up? Prime Kalbi.', 'Nail the order, triple points.', 'Last 15 seconds is last call.']),
       rule: {},
       stars: [3, 7, 10] },
   ];
@@ -119,10 +121,10 @@
   // うまく焼けた枚数の合計が「店の経験」。レベルが1つ上がるごとに、道具を1つ強くできる（各3段）
   const LV_EXP = [0, 5, 12, 20, 30, 42, 56, 72, 90, 110, 132, 156, 182]; // Lv1〜Lv13 に要る経験
   const TOOLS = {
-    sumi: { name: '炭', icon: '🔥', lvName: ['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], effect: ['', '焼き始めが少し速い', '焼き始めがもっと速い', '焼き始めがすごく速い'], speed: [1, 1.2, 1.4, 1.6] },
-    ami: { name: '網', icon: '🥩', lvName: ['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], effect: ['', '焦げるのが少しおそい', '焦げるのがもっとおそい', '焦げるのがすごくおそい'], over: [1, 0.85, 0.7, 0.55] },
-    sara: { name: '皿', icon: '🍽', lvName: ['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], effect: ['', '余熱の待ちが半分', '余熱がすぐ終わり、冷めにくい', '余熱は一瞬。もっと冷めにくい'], rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
-    tong: { name: 'トング', icon: '🥢', lvName: ['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], effect: ['', '返しどきに肉が跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'] },
+    sumi: { name: jaen('炭', 'Charcoal'), icon: '🔥', lvName: jaen(['ふつうの炭', '備長炭', '上備長炭', '極上備長炭'], ['Plain charcoal', 'Binchotan', 'Fine binchotan', 'Supreme binchotan']), effect: jaen(['', '焼き始めが少し速い', '焼き始めがもっと速い', '焼き始めがすごく速い'], ['', 'Sears a bit faster', 'Sears faster', 'Sears way faster']), speed: [1, 1.2, 1.4, 1.6] },
+    ami: { name: jaen('網', 'Grill'), icon: '🥩', lvName: jaen(['ふつうの網', '焦げにくい網', '厚手の網', '職人の網'], ['Plain grill', 'Slow-burn grill', 'Heavy grill', "Master's grill"]), effect: jaen(['', '焦げるのが少しおそい', '焦げるのがもっとおそい', '焦げるのがすごくおそい'], ['', 'Burns a bit slower', 'Burns slower', 'Burns way slower']), over: [1, 0.85, 0.7, 0.55] },
+    sara: { name: jaen('皿', 'Plate'), icon: '🍽', lvName: jaen(['ふつうの皿', '薄い皿', '鉄の皿', '職人の皿'], ['Plain plate', 'Thin plate', 'Iron plate', "Master's plate"]), effect: jaen(['', '余熱の待ちが半分', '余熱がすぐ終わり、冷めにくい', '余熱は一瞬。もっと冷めにくい'], ['', 'Half the resting wait', 'Quick rest. Stays warm', 'Instant rest. Stays warmer']), rest: [1, 0.5, 0.25, 0.08], cool: [1, 1, 1.3, 1.6] },
+    tong: { name: jaen('トング', 'Tongs'), icon: '🥢', lvName: jaen(['ふつうのトング', '音の鳴るトング', '軽いトング', '名人のトング'], ['Plain tongs', 'Clicky tongs', 'Light tongs', "Master's tongs"]), effect: jaen(['', '返しどきに肉が跳ねる', '長押しなしで、すぐ持てる', '焦げそうな肉も跳ねて知らせる'], ['', 'Meat hops at flip time', 'Instant grab. No long press', 'Also hops before it burns']) },
   };
   const TOOL_KEYS = Object.keys(TOOLS);
   function levelOf(exp) { let lv = 1; LV_EXP.forEach((v, i) => { if (exp >= v) lv = i + 1; }); return lv; }
@@ -455,16 +457,16 @@
     if (d < 0.93) return 'hodo';
     return 'kon';
   }
-  const BUCKET_NAME = { raw: 'ナマ', usu: 'うす焼き', hodo: 'ほどよく', kon: 'こんがり', burnt: 'コゲ', char: '炭' };
+  const BUCKET_NAME = { raw: jaen('ナマ', 'Raw'), usu: TARGET_NAME.usu, hodo: TARGET_NAME.hodo, kon: TARGET_NAME.kon, burnt: jaen('コゲ', 'Burnt'), char: jaen('炭', 'Charcoal') };
   function label(m) {
     const b = m.side.map(bucket);
     if (b[0] === b[1]) return { text: BUCKET_NAME[b[0]], kind: b[0] };
-    if (b.includes('char')) return { text: '炭', kind: 'char' };
-    if (b.includes('raw')) return { text: b.includes('burnt') ? '表コゲ裏ナマ' : '片面ナマ', kind: 'raw' };
-    if (b.includes('burnt')) return { text: '片面コゲ', kind: 'burnt' };
+    if (b.includes('char')) return { text: BUCKET_NAME.char, kind: 'char' };
+    if (b.includes('raw')) return { text: b.includes('burnt') ? jaen('表コゲ裏ナマ', 'Burnt & raw') : jaen('片面ナマ', 'Half raw'), kind: 'raw' };
+    if (b.includes('burnt')) return { text: jaen('片面コゲ', 'Half burnt'), kind: 'burnt' };
     const order = ['usu', 'hodo', 'kon'];
     const i0 = order.indexOf(b[0]), i1 = order.indexOf(b[1]);
-    return { text: BUCKET_NAME[order[Math.min(i0, i1)]] + '〜' + BUCKET_NAME[order[Math.max(i0, i1)]], kind: 'mix' };
+    return { text: BUCKET_NAME[order[Math.min(i0, i1)]] + jaen('〜', '-') + BUCKET_NAME[order[Math.max(i0, i1)]], kind: 'mix' };
   }
 
   // ===== 時間を進める（main.js は 1/60 秒ずつ呼ぶ。dt を変えても結果がほぼ同じになるように書く） =====
@@ -609,8 +611,8 @@
     const base = R[i];
     const next = R[i + 1] ? { key: R[i + 1].key, need: R[i + 1].min - g.score } : null;
     const fails = st.raw + st.halfraw + st.burnt + st.char + st.cold + st.leave;
-    if (st.burnt + st.char >= 4) return { key: 'kikaku', name: '規格外', word: '炭', byScore: base.key, next, index: -1 };
-    if (base.key === 'A5' && fails === 0 && st.perfect >= 5) return { key: 'tokusen', name: '特選A5', word: '伝説の網', byScore: base.key, next: null, index: R.length };
+    if (st.burnt + st.char >= 4) return { key: 'kikaku', name: jaen('規格外', 'REJECT'), word: jaen('炭', 'Charcoal'), byScore: base.key, next, index: -1 };
+    if (base.key === 'A5' && fails === 0 && st.perfect >= 5) return { key: 'tokusen', name: jaen('特選A5', 'A5+'), word: jaen('伝説の網', 'Legendary grill'), byScore: base.key, next: null, index: R.length };
     return { key: base.key, name: base.key, word: base.word, next, index: i };
   }
 
@@ -630,17 +632,17 @@
   function lessons(g) {
     const st = g.stats;
     const L = [];
-    if (st.carryOver) L.push({ n: st.carryOver, key: 'carry', text: '網から上げたあとの余熱で焼けすぎた', tip: '網から上げても少し焼ける。強火から上げるときほど早めに' });
-    if (st.burnedOnStrong) L.push({ n: st.burnedOnStrong, key: 'strong', text: '強火の上で焦げた', tip: '焦げそうなら弱火へ逃がせる' });
+    if (st.carryOver) L.push({ n: st.carryOver, key: 'carry', text: jaen('網から上げたあとの余熱で焼けすぎた', 'Overcooked by carryover'), tip: jaen('網から上げても少し焼ける。強火から上げるときほど早めに', 'It keeps cooking off the grill. Pull early off high heat') });
+    if (st.burnedOnStrong) L.push({ n: st.burnedOnStrong, key: 'strong', text: jaen('強火の上で焦げた', 'Burned on high heat'), tip: jaen('焦げそうなら弱火へ逃がせる', 'About to burn? Run it to low heat') });
     const otherBurnt = st.burnt + st.char - st.burnedOnStrong;
-    if (otherBurnt > 0) L.push({ n: otherBurnt, key: 'burnt', text: '焦げた肉を出した', tip: '煙が出たら裏が焦げはじめた合図' });
-    if (st.halfraw) L.push({ n: st.halfraw, key: 'halfraw', text: '片面がナマのまま出した', tip: 'タップで裏返して、両面を焼く' });
-    if (st.raw) L.push({ n: st.raw, key: 'raw', text: '両面ナマで出した', tip: '色が変わるまで待つ' });
-    if (st.cold) L.push({ n: st.cold, key: 'cold', text: '皿で待たせて冷めた', tip: '皿は置きすぎない。湯気が消えたら急いで' });
-    if (st.luke) L.push({ n: st.luke, key: 'luke', text: 'ぬるくなってから出した', tip: '湯気があるうちに出す' });
-    if (st.leave) L.push({ n: st.leave, key: 'leave', text: '待たせて帰らせた', tip: '待ちが短い客から焼く' });
-    if (st.wrong) L.push({ n: st.wrong, key: 'wrong', text: '頼まれたのとちがう肉を出した', tip: '吹き出しの肉を見る' });
-    if (g.leftover) L.push({ n: g.leftover, key: 'left', text: '時間切れで出せずに残った', tip: '終わりぎわは置きすぎない' });
+    if (otherBurnt > 0) L.push({ n: otherBurnt, key: 'burnt', text: jaen('焦げた肉を出した', 'Served burnt'), tip: jaen('煙が出たら裏が焦げはじめた合図', 'Smoke means the bottom is burning') });
+    if (st.halfraw) L.push({ n: st.halfraw, key: 'halfraw', text: jaen('片面がナマのまま出した', 'Served half raw'), tip: jaen('タップで裏返して、両面を焼く', 'Tap to flip. Cook both sides') });
+    if (st.raw) L.push({ n: st.raw, key: 'raw', text: jaen('両面ナマで出した', 'Served raw'), tip: jaen('色が変わるまで待つ', 'Wait for the color to change') });
+    if (st.cold) L.push({ n: st.cold, key: 'cold', text: jaen('皿で待たせて冷めた', 'Went cold on the plate'), tip: jaen('皿は置きすぎない。湯気が消えたら急いで', "Don't park it. Steam's gone? Hurry") });
+    if (st.luke) L.push({ n: st.luke, key: 'luke', text: jaen('ぬるくなってから出した', 'Served lukewarm'), tip: jaen('湯気があるうちに出す', "Serve it while it's steaming") });
+    if (st.leave) L.push({ n: st.leave, key: 'leave', text: jaen('待たせて帰らせた', 'Customers who walked out'), tip: jaen('待ちが短い客から焼く', 'Feed the impatient ones first') });
+    if (st.wrong) L.push({ n: st.wrong, key: 'wrong', text: jaen('頼まれたのとちがう肉を出した', 'Wrong meat served'), tip: jaen('吹き出しの肉を見る', 'Read the meat in their bubble') });
+    if (g.leftover) L.push({ n: g.leftover, key: 'left', text: jaen('時間切れで出せずに残った', 'Leftovers at the bell'), tip: jaen('終わりぎわは置きすぎない', "Don't overload near the end") });
     L.sort((a, b) => b.n - a.n);
     return L;
   }
@@ -648,20 +650,20 @@
   // 称号：その回に実際に起きたことから決める
   function title(g) {
     const st = g.stats;
-    if (st.char >= 2 || st.burnt + st.char >= 4) return { name: '炭の錬金術師', why: '焦がした肉 ' + (st.burnt + st.char) + '枚' };
-    if (st.raw + st.halfraw >= 3) return { name: '生肉ソムリエ', why: 'ナマで出した肉 ' + (st.raw + st.halfraw) + '枚' };
-    if (st.cold >= 2) return { name: '冷めた関係', why: '冷めた肉 ' + st.cold + '枚' };
-    if (st.leave >= 3) return { name: '閉店の達人', why: '帰った客 ' + st.leave + '人' };
-    if (st.served === 0) return { name: 'ただ肉を眺める人', why: 'だれにも出さなかった' };
-    if (st.perfect >= 5) return { name: '神のトング', why: '神焼き ' + st.perfect + '枚' };
-    if (st.maxBusy >= 6 && st.great + st.perfect >= 6) return { name: '網の支配者', why: '6枚同時に焼いた' };
-    if ((g.stats.vipWin || 0) >= 2) return { name: '審査員キラー', why: '審査員を2回うならせた' };
-    if (g.fevers >= 3) return { name: 'フィーバー職人', why: 'フィーバー ' + g.fevers + '回' };
-    if (g.maxCombo >= 6) return { name: 'コンボ焼き師', why: '最大 ' + g.maxCombo + 'コンボ' };
-    if (g.score >= 2000) return { name: '肉神', why: g.score + '点' };
-    if (g.score >= 1100) return { name: '焼肉の鬼', why: g.score + '点' };
-    if (g.score >= 400) return { name: '町の焼き係', why: g.score + '点' };
-    return { name: '見習いトング', why: g.score + '点' };
+    if (st.char >= 2 || st.burnt + st.char >= 4) return { name: jaen('炭の錬金術師', 'Charcoal Alchemist'), why: jaen('焦がした肉 ' + (st.burnt + st.char) + '枚', 'Burned ' + (st.burnt + st.char)) };
+    if (st.raw + st.halfraw >= 3) return { name: jaen('生肉ソムリエ', 'Raw Meat Sommelier'), why: jaen('ナマで出した肉 ' + (st.raw + st.halfraw) + '枚', 'Served ' + (st.raw + st.halfraw) + ' raw') };
+    if (st.cold >= 2) return { name: jaen('冷めた関係', 'Cold Shoulder'), why: jaen('冷めた肉 ' + st.cold + '枚', st.cold + ' went cold') };
+    if (st.leave >= 3) return { name: jaen('閉店の達人', 'Closing Time Pro'), why: jaen('帰った客 ' + st.leave + '人', st.leave + ' walked out') };
+    if (st.served === 0) return { name: jaen('ただ肉を眺める人', 'Professional Meat Watcher'), why: jaen('だれにも出さなかった', 'Fed nobody') };
+    if (st.perfect >= 5) return { name: jaen('神のトング', 'Tongs of God'), why: jaen('神焼き ' + st.perfect + '枚', st.perfect + ' Godly') };
+    if (st.maxBusy >= 6 && st.great + st.perfect >= 6) return { name: jaen('網の支配者', 'Lord of the Grill'), why: jaen('6枚同時に焼いた', '6 on the grill at once') };
+    if ((g.stats.vipWin || 0) >= 2) return { name: jaen('審査員キラー', 'Critic Killer'), why: jaen('審査員を2回うならせた', 'Wowed the critic twice') };
+    if (g.fevers >= 3) return { name: jaen('フィーバー職人', 'Fever Pro'), why: jaen('フィーバー ' + g.fevers + '回', g.fevers + ' Fevers') };
+    if (g.maxCombo >= 6) return { name: jaen('コンボ焼き師', 'Combo Cook'), why: jaen('最大 ' + g.maxCombo + 'コンボ', 'Best combo ' + g.maxCombo) };
+    if (g.score >= 2000) return { name: jaen('肉神', 'Meat Deity'), why: jaen(g.score + '点', g.score + ' pts') };
+    if (g.score >= 1100) return { name: jaen('焼肉の鬼', 'Yakiniku Demon'), why: jaen(g.score + '点', g.score + ' pts') };
+    if (g.score >= 400) return { name: jaen('町の焼き係', 'Neighborhood Griller'), why: jaen(g.score + '点', g.score + ' pts') };
+    return { name: jaen('見習いトング', 'Rookie Tongs'), why: jaen(g.score + '点', g.score + ' pts') };
   }
 
   const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, starNeed, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };

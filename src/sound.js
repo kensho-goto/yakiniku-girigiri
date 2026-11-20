@@ -5,11 +5,12 @@
   let bgmMode = 'off', nextNote = 0, stepN = 0, bgmTimer = null;
   // 音の段階：0＝全部 / 1＝音楽だけ消す / 2＝全部消す
   let level = 0;
+  let held = false; // ゲームサイトの広告のあいだ・サイトの「音を消す」のときは止めておく
   try { const v = localStorage.getItem('yaki.sound'); level = v != null ? Number(v) || 0 : localStorage.getItem('yaki.mute') === '1' ? 2 : 0; } catch (e) { /* 保存できない環境 */ }
   const BGM_VOL = 0.55;
 
   function ensure() {
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return true; }
+    if (ac) { if (ac.state === 'suspended' && !held) ac.resume(); return true; }
     // iPhone：消音スイッチが入っていても鳴るように（Safari 16.4 以降）
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* 古い端末 */ }
     const AC = root.AudioContext || root.webkitAudioContext;
@@ -123,6 +124,7 @@
 
   const S = {
     unlock: ensure,
+    hold(on) { held = !!on; try { if (ac) { if (held) ac.suspend(); else ac.resume(); } } catch (e) { /* 止められなくても遊べる */ } },
     get muted() { return level >= 2; },
     get level() { return level; },
     // 押すたびに：全部 → 音楽だけ消す → 全部消す → 全部

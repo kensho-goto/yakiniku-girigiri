@@ -1,0 +1,42 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- ゲームサイトに載せる絵の元。?w=横&h=縦&lang=ja|en。tools/store.js が撮って docs/store/ に置く（shot.png は tools/ogp.js が作る） -->
+<style>
+@font-face { font-family: 'Potta One'; src: url(../fonts/PottaOne.woff2); }
+@font-face { font-family: 'Yusei Magic'; src: url(../fonts/YuseiMagic.woff2); }
+html, body { margin: 0; }
+.og { position: relative; overflow: hidden; background: #1a100c; }
+.bg { position: absolute; inset: -40px; background: var(--shot) center 62% / cover; filter: blur(14px) brightness(.45) saturate(1.2); }
+.glow { position: absolute; background: radial-gradient(closest-side, rgba(255,110,30,.45), transparent); }
+.ph { position: absolute; border-radius: 6%/3%; overflow: hidden; transform: rotate(5deg); border: 10px solid #120a07; box-shadow: 0 30px 60px rgba(0,0,0,.6); background: var(--shot) center top / 100% auto; aspect-ratio: 390 / 760; }
+.logo { position: absolute; transform-origin: 0 0; width: 640px; height: 520px; }
+.yu { position: absolute; left: 32px; top: 0; font: 60px 'Potta One'; letter-spacing: .3em; color: #ff5a3a; transform: rotate(-4deg);
+  text-shadow: -4px -4px 0 #2a1206, 4px -4px 0 #2a1206, -4px 4px 0 #2a1206, 4px 4px 0 #2a1206, 0 6px 0 #2a1206; }
+.ju { position: absolute; left: 0; top: 58px; font: 210px/1 'Potta One'; letter-spacing: -.06em; color: #ffd84d; transform: rotate(-5deg); white-space: nowrap;
+  text-shadow: -9px -9px 0 #2a1206, 9px -9px 0 #2a1206, -9px 9px 0 #2a1206, 9px 9px 0 #2a1206, 0 -10px 0 #2a1206, 0 10px 0 #2a1206, -10px 0 0 #2a1206, 10px 0 0 #2a1206, 0 24px 0 #a3261b, 0 0 70px rgba(255,140,40,.8); }
+.cp { position: absolute; left: 32px; top: 340px; font: 44px/1.35 'Yusei Magic'; color: #fff; transform: rotate(-2deg); white-space: nowrap;
+  text-shadow: -3px -3px 0 #2a1206, 3px -3px 0 #2a1206, -3px 3px 0 #2a1206, 3px 3px 0 #2a1206, 0 4px 0 #2a1206; }
+.cp b { font-weight: 400; color: #ffd84d; } .cp i { font-style: normal; color: #ff7a5a; }
+</style></head><body>
+<div class="og"><div class="bg"></div><div class="glow"></div><div class="ph"></div>
+<div class="logo"><div class="yu"></div><div class="ju"></div><div class="cp"></div></div></div>
+<script>
+const q = new URLSearchParams(location.search), W = +q.get('w') || 1200, H = +q.get('h') || 630, en = q.get('lang') === 'en';
+const og = document.querySelector('.og'), ph = document.querySelector('.ph'), lg = document.querySelector('.logo'), gl = document.querySelector('.glow');
+og.style.setProperty('--shot', `url(shot-${en ? 'en' : 'ja'}.png)`); og.style.width = W + 'px'; og.style.height = H + 'px';
+document.querySelector('.yu').textContent = en ? 'YAKINIKU' : '焼肉';
+document.querySelector('.ju').textContent = en ? 'JUU' : 'ジュー';
+document.querySelector('.cp').innerHTML = en ? 'Too early, <b>raw</b>. Too late, <i>burnt</i>.<br>Grill it right. Serve it fast.' : '早いと<b>生</b>、遅いと<i>焦げ</i>。<br>注文どおりに焼いて出せ';
+if (en) document.querySelector('.yu').style.letterSpacing = '.12em';
+const LW = Math.max(640, ...[...lg.children].map((c) => c.offsetLeft + c.scrollWidth + 30)); // ロゴと文の本当の幅
+const wide = W / H > 1.25;
+if (wide) { // 左にロゴ、右にスマホ
+  const pw = H * 1.02 * 390 / 760; ph.style.width = pw + 'px'; ph.style.right = W * 0.06 + 'px'; ph.style.top = H * 0.06 + 'px';
+  const s = Math.min((W - pw - W * 0.22) / LW, H / 560); lg.style.transform = `scale(${s})`; lg.style.left = W * 0.06 + 'px'; lg.style.top = (H - 520 * s) / 2 + 'px';
+  Object.assign(gl.style, { left: '-8%', top: '15%', width: '65%', height: '90%' });
+} else { // 上にロゴ、下にスマホ
+  const s = Math.min(W * 0.86 / LW, H * 0.42 / 520); lg.style.transform = `scale(${s})`; lg.style.left = (W - LW * s) / 2 + 'px'; lg.style.top = H * 0.04 + 'px';
+  const pw = Math.min(W * 0.62, H * 0.62 * 390 / 760); ph.style.width = pw + 'px'; ph.style.left = (W - pw) / 2 + 'px'; ph.style.top = H * 0.04 + 520 * s + 10 + 'px';
+  Object.assign(gl.style, { left: '0', top: '0', width: '100%', height: '60%' });
+}
+</script>
+</body></html>

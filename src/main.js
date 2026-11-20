@@ -119,18 +119,18 @@
   function openUpTo() { const f = fromLv(); return f === 0 ? NS : f || 1; }
   function unlocked(k) { return k === 0 || k <= openUpTo() || (starsMap()[k - 1] || 0) >= 1; }
   function nextStage() { if (fromLv() === 0) return 0; const sm = starsMap(); for (let k = Math.max(1, fromLv() || 1); k <= NS; k++) if (!(sm[k] >= 1)) return k; return 0; }
-  const LVPICK = [{ v: 1, d: 0.55, name: 'ぜんぜん', sub: '初心者。焼き方から' }, { v: 4, d: 0.8, name: 'ふつう', sub: '中級者。火と余熱から' }, { v: 0, d: 1.05, name: 'まかせろ', sub: '上級者。いきなり本番' }];
+  const LVPICK = [{ v: 1, d: 0.55, name: jaen('ぜんぜん', 'Not at all'), sub: jaen('初心者。焼き方から', 'Beginner. Start from scratch') }, { v: 4, d: 0.8, name: jaen('ふつう', 'Kinda'), sub: jaen('中級者。火と余熱から', 'Intermediate. Fire and carryover') }, { v: 0, d: 1.05, name: jaen('まかせろ', 'Leave it to me'), sub: jaen('上級者。いきなり本番', 'Expert. Straight to Showtime') }];
   function showLevels() {
     if (window.YP && !YP.canStart()) return;
     const cur = fromLv();
-    boss('levelBoss', ['で、あんた。', '肉は焼けるのかい？']);
+    boss('levelBoss', jaen(['で、あんた。', '肉は焼けるのかい？'], ['So, you.', 'Can you even grill meat?']));
     $('levelList').innerHTML = LVPICK.map((l, j) => `<button class="srow${cur === l.v ? ' cur' : ''}" data-v="${l.v}"><span class="no lvi"><img src="${meatImg('kalbi', l.d, j)}" alt=""></span><span class="tx"><b>${l.name}</b><small>${l.sub}</small></span></button>`).join('');
     $('levelList').querySelectorAll('.srow').forEach((b) => { b.onclick = () => { store.set('yaki.from', Number(b.dataset.v)); $('levels').hidden = true; showBest(); begin(nextStage()); }; });
     ['title', 'stages', 'result'].forEach((id) => { $(id).hidden = true; });
     $('levels').hidden = false;
   }
   function starHtml(n) { return '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>'; }
-  function stageLabel(k) { return k ? `ステージ${k}「${YG.STAGES[k - 1].name}」` : '本番'; }
+  function stageLabel(k) { return k ? jaen(`ステージ${k}「${YG.STAGES[k - 1].name}」`, `Stage ${k}: ${YG.STAGES[k - 1].name}`) : jaen('本番', 'Showtime'); }
 
   // はじめて遊ぶステージは、先に「新しく覚えること」を見せる
   function begin(k) {
@@ -143,11 +143,12 @@
   }
   function showIntro(k) {
     const st = YG.STAGES[k - 1];
-    $('introNo').textContent = 'ステージ ' + k + ' / ' + NS;
+    $('introNo').textContent = jaen('ステージ ', 'Stage ') + k + ' / ' + NS;
     $('introName').textContent = st.name;
     boss('introBoss', st.intro);
     const nd = YG.starNeed(k, toolSteps()), plus = nd[2] - st.stars[2];
-    $('introGoal').innerHTML = `<div class="goalbig">うまく焼いて <b>${nd[0]}</b>枚 出せ！</div>★2 <b>${nd[1]}</b>枚　★3 <b>${nd[2]}</b>枚${plus ? ` <small>道具ぶん+${plus}</small>` : ''}　${YG.ruleOf(k).duration}秒`;
+    $('introGoal').innerHTML = jaen(`<div class="goalbig">うまく焼いて <b>${nd[0]}</b>枚 出せ！</div>★2 <b>${nd[1]}</b>枚　★3 <b>${nd[2]}</b>枚${plus ? ` <small>道具ぶん+${plus}</small>` : ''}　${YG.ruleOf(k).duration}秒`,
+      `<div class="goalbig">Serve <b>${nd[0]}</b> done right!</div>★2 <b>${nd[1]}</b> &nbsp; ★3 <b>${nd[2]}</b>${plus ? ` <small>+${plus} for tools</small>` : ''} &nbsp; ${YG.ruleOf(k).duration} sec`);
     ['title', 'stages', 'result', 'pause'].forEach((id) => { $(id).hidden = true; });
     $('intro').hidden = false;
   }
@@ -156,7 +157,7 @@
     seen[stage] = 1; store.set('yaki.seen', seen);
     newRun(stage);
   };
-  const LEVELS = [{ from: 1, name: '初心者', sub: '焼き方をおぼえる' }, { from: 4, name: '中級者', sub: '火と余熱を使いこなす' }, { from: 7, name: '上級者', sub: '本番と同じ' }];
+  const LEVELS = [{ from: 1, name: jaen('初心者', 'Beginner'), sub: jaen('焼き方をおぼえる', 'Learn to grill') }, { from: 4, name: jaen('中級者', 'Intermediate'), sub: jaen('火と余熱を使いこなす', 'Master fire and carryover') }, { from: 7, name: jaen('上級者', 'Expert'), sub: jaen('本番と同じ', 'Same as Showtime') }];
   function showStages() {
     if (window.YP && !YP.canStart()) return;
     const sm = starsMap();
@@ -165,10 +166,10 @@
     for (let k = 1; k <= NS; k++) {
       const st = YG.STAGES[k - 1], open = unlocked(k);
       const lv = LEVELS.find((l) => l.from === k); if (lv) html += `<div class="lvhead">${lv.name}<small>${lv.sub}</small></div>`;
-      html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '?'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st"><span class="stars">${starHtml(sm[k] || 0)}</span><small class="goaln">${st.stars[0]}枚〜</small></span></button>`;
+      html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '?'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st"><span class="stars">${starHtml(sm[k] || 0)}</span><small class="goaln">${st.stars[0]}${jaen('枚〜', '+')}</small></span></button>`;
     }
     const total = Object.values(sm).reduce((a, b) => a + b, 0);
-    html += `<button class="srow free" data-k="0"><span class="no">本番</span><span class="tx"><b>本番</b><small>${cur ? '自信があれば、とばしてここへ' : '道具なし。腕だけでランク勝負'}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
+    html += `<button class="srow free" data-k="0"><span class="no">${jaen('本番', 'GO')}</span><span class="tx"><b>${jaen('本番', 'Showtime')}</b><small>${cur ? jaen('自信があれば、とばしてここへ', 'Feeling bold? Skip straight here') : jaen('道具なし。腕だけでランク勝負', 'No tools. Rank on skill alone')}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
     html += `<div class="goal" style="text-align:center">★ ${total} / ${NS * 3}</div>`;
     $('stageList').innerHTML = html;
     $('stageList').querySelectorAll('.srow').forEach((b) => { b.onclick = () => { if (!b.disabled) begin(Number(b.dataset.k)); }; });
@@ -193,20 +194,23 @@
     ['title', 'pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
+    if (window.YQ) YQ.start();
     if (window.YC) YC.hit(stage ? 'start-s' + stage : 'start-honban');
   }
   function pause(on) {
     if (!g || mode !== 'play' || g.state === 'over') return;
     held = null; ptr = null;
     last = null; // もどったときに、離れていた時間をまとめて足さない
-    if (on) { g.paused = true; resumeT = 0; $('pause').hidden = false; YS.silence(); return; }
+    if (on) { g.paused = true; resumeT = 0; $('pause').hidden = false; YS.silence(); if (window.YQ) YQ.stop(); return; }
     if (!g.paused) return;
+    if (window.YQ) YQ.start();
     $('pause').hidden = true;
     // すぐには動かさない：3・2・1 のあとで再開（遊ぶ前の「ready」なら待たない）
     if (g.state === 'ready') g.paused = false; else resumeT = 1.5;
   }
   function toTitle() {
     if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
+    if (window.YQ) YQ.stop();
     mode = 'title'; g = null;
     ['pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
@@ -224,7 +228,7 @@
   function lvHtml(sh, gained) {
     const lo = YG.LV_EXP[sh.lv - 1], hi = sh.next;
     const pct = hi ? Math.round((sh.exp - lo) / (hi - lo) * 100) : 100;
-    return `店 <span class="lvl">Lv${sh.lv}</span>　${hi ? `あと${hi - sh.exp}枚で Lv${sh.lv + 1}` : 'これ以上ない店'}<div class="bar"><i style="width:${pct}%"></i></div>`;
+    return jaen(`店 <span class="lvl">Lv${sh.lv}</span>　${hi ? `あと${hi - sh.exp}枚で Lv${sh.lv + 1}` : 'これ以上ない店'}`, `Shop <span class="lvl">Lv${sh.lv}</span> &nbsp; ${hi ? `${hi - sh.exp} more to Lv${sh.lv + 1}` : 'Maxed out'}`) + `<div class="bar"><i style="width:${pct}%"></i></div>`;
   }
   // 結果のあと：うまく焼けた枚数を経験に足す。レベルが上がったら道具を強くできる
   function addExp(n) {
@@ -232,8 +236,8 @@
     store.set('yaki.exp', before.exp + n);
     const sh = shopState();
     let html = lvHtml(sh, n);
-    if (sh.lv > before.lv) { html += `<span class="up">店が育った！ 道具を1つ強くできる</span>`; YS.rankUp(); }
-    if (sh.tickets > 0) html += `<button class="btn2" id="rTools">道具を強くする！</button>`;
+    if (sh.lv > before.lv) { html += `<span class="up">${jaen('店が育った！ 道具を1つ強くできる', 'Shop leveled up! Upgrade a tool')}</span>`; YS.rankUp(); }
+    if (sh.tickets > 0) html += `<button class="btn2" id="rTools">${jaen('道具を強くする！', 'Upgrade tools!')}</button>`;
     $('rLevel').innerHTML = html;
     if ($('rTools')) $('rTools').onclick = () => showTools(true);
   }
@@ -242,14 +246,14 @@
   function showTools(fromResult) {
     toolsFromResult = !!fromResult;
     const sh = shopState();
-    boss('toolBoss', sh.tickets > 0 ? [`どれを強くする？ あと<b>${sh.tickets}</b>つだ。`] : ['うまく焼けば店が育つ。', '育ったら道具を強くしてやる。'], sh.tickets > 0 ? 'grin' : 'say');
-    $('toolInfo').innerHTML = lvHtml(sh) + '<small class="lvrule">道具が効くのはステージだけ。本番は腕だけの勝負。<br>強い店ほど客が多く来て、★3の目標も上がる</small>';
+    boss('toolBoss', sh.tickets > 0 ? [jaen(`どれを強くする？ あと<b>${sh.tickets}</b>つだ。`, `Pick one to upgrade. <b>${sh.tickets}</b> left.`)] : jaen(['うまく焼けば店が育つ。', '育ったら道具を強くしてやる。'], ['Grill it right and the shop grows.', "Then I'll upgrade your gear."]), sh.tickets > 0 ? 'grin' : 'say');
+    $('toolInfo').innerHTML = lvHtml(sh) + '<small class="lvrule">' + jaen('道具が効くのはステージだけ。本番は腕だけの勝負。<br>強い店ほど客が多く来て、★3の目標も上がる', 'Tools only work in Stages. Showtime is pure skill.<br>Better shop, more customers, tougher ★3.') + '</small>';
     $('toolList').innerHTML = YG.TOOL_KEYS.map((k) => {
       const T = YG.TOOLS[k], n = sh.tools[k] || 0, max = n >= 3;
       const can = !max && sh.tickets > 0;
       const now = n ? T.effect[n] : '';
-      const nx = max ? '' : `${n ? '<br>' : ''}${n ? '次は ' : ''}<span class="nx">${T.effect[n + 1]}</span>`;
-      return `<button class="srow tool${max ? ' max' : ''}${can ? '' : ' cant'}" data-k="${k}"><span class="no lvi"><img src="${toolImg(k)}" alt=""></span><span class="tx"><b>${T.lvName[n]}</b><small>${now}${nx}</small></span><span class="pips">${tally(n)}${max ? '<small>最高</small>' : can ? '<small>強くする！</small>' : ''}</span></button>`;
+      const nx = max ? '' : `${n ? '<br>' : ''}${n ? jaen('次は ', 'Next: ') : ''}<span class="nx">${T.effect[n + 1]}</span>`;
+      return `<button class="srow tool${max ? ' max' : ''}${can ? '' : ' cant'}" data-k="${k}"><span class="no lvi"><img src="${toolImg(k)}" alt=""></span><span class="tx"><b>${T.lvName[n]}</b><small>${now}${nx}</small></span><span class="pips">${tally(n)}${max ? `<small>${jaen('最高', 'MAX')}</small>` : can ? `<small>${jaen('強くする！', 'Upgrade!')}</small>` : ''}</span></button>`;
     }).join('');
     $('toolList').querySelectorAll('.tool').forEach((b) => {
       b.onclick = () => {
@@ -265,10 +269,11 @@
   }
   function addExpRefresh() { // 結果画面の「道具を強くする（あと○）」を今の数に
     const sh = shopState();
-    $('rLevel').innerHTML = lvHtml(sh) + (sh.tickets > 0 ? `<button class="btn2" id="rTools">道具を強くする！</button>` : '');
+    $('rLevel').innerHTML = lvHtml(sh) + (sh.tickets > 0 ? `<button class="btn2" id="rTools">${jaen('道具を強くする！', 'Upgrade tools!')}</button>` : '');
     if ($('rTools')) $('rTools').onclick = () => showTools(true);
   }
   $('toolBtn').onclick = () => showTools(false);
+  $('langBtn').onclick = () => { if (window.YI) YI.set(YI.en ? 'ja' : 'en'); };
   $('toolsClose').onclick = () => { $('tools').hidden = true; if (toolsFromResult && mode === 'result') $('result').hidden = false; else toTitle(); };
   // トング：返しどき（下が焼けて上がまだ）に肉が跳ねる。名人のトングは焦げそうなときも
   function tongHop(m, t) {
@@ -285,25 +290,28 @@
     const k = nextStage();
     const sm = starsMap();
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
-    $('titleStage').innerHTML = k ? `つぎは <b>${YG.STAGES[k - 1].name}</b>` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? 'つぎは <b>本番</b>' : '<b>全部クリア！</b> 本番で自己ベストを');
+    $('titleStage').innerHTML = k ? jaen(`つぎは <b>${YG.STAGES[k - 1].name}</b>`, `Next up: <b>${YG.STAGES[k - 1].name}</b>`) : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? jaen('つぎは <b>本番</b>', 'Next up: <b>Showtime</b>') : jaen('<b>全部クリア！</b> 本番で自己ベストを', '<b>All clear!</b> Go beat your Showtime best'));
     const sh = shopState();
-    $('toolBtn').innerHTML = sh.tickets > 0 ? '道具<span class="badge">を強くできる！</span>' : '道具';
-    $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
+    $('toolBtn').innerHTML = sh.tickets > 0 ? jaen('道具<span class="badge">を強くできる！</span>', 'Tools <span class="badge">upgrade!</span>') : jaen('道具', 'Tools');
+    const brName = br === '特選A5' || br === 'A5+' ? jaen('特選A5', 'A5+') : br; // 特選A5 は今のことばで
+    $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}${jaen('　', ' &nbsp; ')}` : '') + (b ? jaen(`本番の自己ベスト <b>${b}</b>`, `Showtime best <b>${b}</b>`) + (br ? jaen(`　最高ランク <b>${brName}</b>`, ` &nbsp; Top rank <b>${brName}</b>`) : '') : '');
   }
   showBest();
   $('titleBoss').src = bossImg('grin');
   // 文字の形（Potta One・Yusei Magic）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
   (function waitFont() {
     const sb = $('startBtn');
-    sb.disabled = true; sb.textContent = '準備中…';
+    sb.disabled = true; sb.textContent = jaen('準備中…', '...');
     const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Potta One"', '焼肉0123') : Promise.resolve();
-    Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = '焼く'; });
+    Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = jaen('焼く', 'GRILL'); if (window.YQ) YQ.loaded(); });
   })();
   $('startBtn').onclick = () => { if (fromLv() == null && !Object.keys(starsMap()).length) showLevels(); else begin(nextStage()); };
   $('levelsClose').onclick = () => { $('levels').hidden = true; toTitle(); };
   $('lvBtn').onclick = showLevels;
-  $('againBtn').onclick = () => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); };
-  $('rRetry').onclick = () => newRun(stage);
+  // ゲームサイト版：結果からもう一度遊ぶときに、区切りの広告をはさむ（出すかどうかはサイトが決める）
+  const afterAd = (fn) => (window.YQ ? YQ.breakAd(fn) : fn());
+  $('againBtn').onclick = () => afterAd(() => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); });
+  $('rRetry').onclick = () => afterAd(() => newRun(stage));
   $('resumeBtn').onclick = () => pause(false);
   $('retryBtn').onclick = () => newRun(stage);
   $('toTitleBtn').onclick = toTitle;
@@ -313,12 +321,13 @@
 
   function showResult() {
     mode = 'result';
+    if (window.YQ) YQ.stop();
     YS.silence();
     store.set('yaki.plays', store.get('yaki.plays', 0) + 1);
-    $('rScore').textContent = g.stage ? 'うまく焼けた ' + g.stats.ok + '枚' : g.score;
+    $('rScore').textContent = g.stage ? jaen('うまく焼けた ' + g.stats.ok + '枚', g.stats.ok + ' done right') : g.score;
     $('rScore').style.fontSize = g.stage ? '32px' : '44px';
-    $('rCost').textContent = g.stage ? '' : (g.leftoverCost || 0) + (g.wasteCost || 0) > 0 ? `捨てた・残した肉代 −${(g.leftoverCost || 0) + (g.wasteCost || 0)}` : '';
-    $('againBtn').textContent = 'もう一回'; delete $('againBtn').dataset.next;
+    $('rCost').textContent = g.stage ? '' : (g.leftoverCost || 0) + (g.wasteCost || 0) > 0 ? jaen('捨てた・残した肉代 −', 'Wasted meat −') + ((g.leftoverCost || 0) + (g.wasteCost || 0)) : '';
+    $('againBtn').textContent = jaen('もう一回', 'Again'); delete $('againBtn').dataset.next;
     $('rRetry').hidden = true; $('rStages').hidden = false;
     addExp(g.stats.ok);
     if (g.stage) showStageResult(); else showFreeResult();
@@ -326,13 +335,13 @@
     $('rTitle').textContent = tt.name;
     $('rWhy').textContent = tt.why;
     const st = g.stats, R = g.R;
-    const cells = [['神焼き', st.perfect], ['うまい', st.great], R.fever && ['フィーバー', g.fevers], R.vip && st.vipCame && ['審査員の満足', (st.vipWin || 0) + '/' + st.vipCame],
-      ['生', st.raw + st.halfraw, 1], ['焦げ', st.burnt + st.char, 1], ['冷め', st.cold, 1], ['帰った客', st.leave, 1]].filter((c) => c && c[1] && c[1] !== '0');
+    const cells = [[jaen('神焼き', 'Godly'), st.perfect], [jaen('うまい', 'Tasty'), st.great], R.fever && [jaen('フィーバー', 'Fever'), g.fevers], R.vip && st.vipCame && [jaen('審査員の満足', 'Critic happy'), (st.vipWin || 0) + '/' + st.vipCame],
+      [jaen('生', 'Raw'), st.raw + st.halfraw, 1], [jaen('焦げ', 'Burnt'), st.burnt + st.char, 1], [jaen('冷め', 'Cold'), st.cold, 1], [jaen('帰った客', 'Walkouts'), st.leave, 1]].filter((c) => c && c[1] && c[1] !== '0');
     $('rStats').innerHTML = cells.map(([k, v, bad]) => `<div${bad ? ' class="bad"' : ''}>${k}<b>${v}</b></div>`).join('');
     const ls = YG.lessons(g).slice(0, 2);
     $('rLessons').innerHTML = '<div class="boss" id="resultBoss"></div>';
-    if (ls.length) boss('resultBoss', ls.map((l) => `${l.text}のが <b>${l.n}</b>${l.key === 'leave' ? '人' : '枚'}。${l.tip}。`), 'hmm');
-    else boss('resultBoss', st.served ? ['失敗なし。やるじゃないか。', '次はもっと置いて、にぎやかに。'] : ['だれにも出してないぞ。', '焼けたら皿へ。そして客へ。'], st.served ? 'grin' : 'hmm');
+    if (ls.length) boss('resultBoss', ls.map((l) => jaen(`${l.text}のが <b>${l.n}</b>${l.key === 'leave' ? '人' : '枚'}。${l.tip}。`, `${l.text}: <b>${l.n}</b>. ${l.tip}.`)), 'hmm');
+    else boss('resultBoss', st.served ? jaen(['失敗なし。やるじゃないか。', '次はもっと置いて、にぎやかに。'], ['Zero flops. Not bad, kid.', 'Next time, load up the grill.']) : jaen(['だれにも出してないぞ。', '焼けたら皿へ。そして客へ。'], ["You didn't feed a soul.", 'Grill it. Plate it. Serve it.']), st.served ? 'grin' : 'hmm');
     $('ptFeedback').hidden = true;
     if (window.YP) YP.end(g, g.stage ? { key: 'S' + g.stage } : YG.shopRank(g), tt);
     shareText = brag(tt);
@@ -345,13 +354,15 @@
   function brag(tt) {
     if (g.stage) {
       const k = g.stage, n = YG.starsOf(g);
-      return `焼肉のクソゲー「ジュー」\nステージ${k}「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nうまく焼けた ${g.stats.ok}枚\n称号「${tt.name}」`;
+      return jaen(`焼肉のクソゲー「ジュー」\nステージ${k}「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nうまく焼けた ${g.stats.ok}枚\n称号「${tt.name}」`,
+        `JUU, the dumbest yakiniku game\nStage ${k}: ${YG.STAGES[k - 1].name} ${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nGrilled ${g.stats.ok} right\nTitle: ${tt.name}`);
     }
     const rk = YG.shopRank(g);
-    return `焼肉のクソゲー「ジュー」\n本番 ${rk.name}「${rk.word}」\n売上 ¥${g.score}\n称号「${tt.name}」`;
+    return jaen(`焼肉のクソゲー「ジュー」\n本番 ${rk.name}「${rk.word}」\n売上 ¥${g.score}\n称号「${tt.name}」`,
+      `JUU, the dumbest yakiniku game\nShowtime rank ${rk.name}: ${rk.word}\nSales ¥${g.score}\nTitle: ${tt.name}`);
   }
   $('rShare').onclick = () => {
-    const text = shareText + '\n#ジュー焼肉';
+    const text = shareText + jaen('\n#ジュー焼肉', '\n#JuuYakiniku');
     if (window.YC) YC.hit('share');
     if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ text, url: GAME_URL }).catch(() => {}); return; }
     open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(GAME_URL), '_blank', 'noopener');
@@ -362,26 +373,27 @@
     const n = YG.starsOf(g);
     const sm = starsMap();
     const before = sm[k] || 0;
-    if (n > before) { sm[k] = n; store.set('yaki.stars', sm); }
+    if (n > before) { sm[k] = n; store.set('yaki.stars', sm); if (window.YQ) YQ.happy(); }
     const sb = store.get('yaki.stageBestN', {}) || {};
     const bestBefore = sb[k] || 0;
     const got = g.stats.ok;
     if (got > bestBefore) { sb[k] = got; store.set('yaki.stageBestN', sb); }
     const stamp = $('rRank');
     stamp.className = 'rank r-stage' + (n ? '' : ' r-stage0');
-    stamp.innerHTML = `<span class="rk">${starHtml(n)}</span><span class="rw">ステージ${k}「${st.name}」</span>`;
+    stamp.innerHTML = `<span class="rk">${starHtml(n)}</span><span class="rw">${stageLabel(k)}</span>`;
     stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
     const opened = n >= 1 && before === 0 && k < NS;
     const nd = YG.starNeed(k, g.up.steps), need = nd[n];
-    $('rNext').innerHTML = opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `目標まで あと <b>${need - got}</b>枚（目標 ${nd[0]}枚）` : n < 3 ? `★${n + 1}まで あと <b>${need - got}</b>枚` : '★3 達成！';
-    if (n >= 1 && before === 0 && k === NS) $('rNext').innerHTML = '全ステージ クリア！ 本番が待っている';
+    $('rNext').innerHTML = jaen(opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `目標まで あと <b>${need - got}</b>枚（目標 ${nd[0]}枚）` : n < 3 ? `★${n + 1}まで あと <b>${need - got}</b>枚` : '★3 達成！',
+      opened ? `Stage ${k + 1}: ${YG.STAGES[k].name} unlocked!` : n === 0 ? `<b>${need - got}</b> short. The goal is ${nd[0]}` : n < 3 ? `<b>${need - got}</b> more for ★${n + 1}` : '★3. Respect.');
+    if (n >= 1 && before === 0 && k === NS) $('rNext').innerHTML = jaen('全ステージ クリア！ 本番が待っている', 'Every stage cleared! Showtime awaits');
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(n * 1.5); } }, 350);
-    $('rNew').innerHTML = n > before && before > 0 ? '<span class="new">★更新！</span>' : got > bestBefore && bestBefore > 0 ? '<span class="new">ステージの自己ベスト！</span>' : '';
-    $('rBest').innerHTML = bestBefore > 0 ? `このステージの自己ベスト <b>${Math.max(bestBefore, got)}</b>枚` : '';
+    $('rNew').innerHTML = n > before && before > 0 ? `<span class="new">${jaen('★更新！', 'New ★!')}</span>` : got > bestBefore && bestBefore > 0 ? `<span class="new">${jaen('ステージの自己ベスト！', 'Stage best!')}</span>` : '';
+    $('rBest').innerHTML = bestBefore > 0 ? jaen(`このステージの自己ベスト <b>${Math.max(bestBefore, got)}</b>枚`, `Stage best <b>${Math.max(bestBefore, got)}</b>`) : '';
     // 次へ進めるなら、大きいボタンは「次のステージへ」
     if (n >= 1) {
       const nk = k < NS ? k + 1 : 0;
-      $('againBtn').textContent = nk ? '次のステージへ' : '本番へ';
+      $('againBtn').textContent = nk ? jaen('次のステージへ', 'Next stage') : jaen('本番へ', 'Showtime');
       $('againBtn').dataset.next = String(nk);
       $('rRetry').hidden = false;
     }
@@ -395,16 +407,17 @@
     const order = ['kikaku', 'C', 'B', 'A3', 'A4', 'A5', 'tokusen'];
     const bestRank = store.get('yaki.bestRank', null);
     const rkName = rk.key === 'kikaku' ? null : rk.name;
-    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(bestRank === '特選A5' ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
+    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(bestRank === '特選A5' || bestRank === 'A5+' ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
     const stamp = $('rRank');
     stamp.className = 'rank r-' + rk.key;
-    stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? '（売上だけなら ' + rk.byScore + '）' : rk.word}</span>`;
+    stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? jaen('（売上だけなら ' + rk.byScore + '）', 'Sales alone: ' + rk.byScore) : rk.word}</span>`;
     stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
     const nx = rk.key !== 'tokusen' && rk.next;
-    $('rNext').innerHTML = rk.key === 'kikaku' ? '焦がしすぎて格付けできません' : nx ? `${nx.key}まで あと <b>${nx.need}</b>点` : rk.key === 'A5' ? '失敗なし＋神焼き5枚で <b>特選A5</b>' : '最高ランク！';
+    $('rNext').innerHTML = jaen(rk.key === 'kikaku' ? '焦がしすぎて格付けできません' : nx ? `${nx.key}まで あと <b>${nx.need}</b>点` : rk.key === 'A5' ? '失敗なし＋神焼き5枚で <b>特選A5</b>' : '最高ランク！',
+      rk.key === 'kikaku' ? 'Too burnt to grade' : nx ? `<b>${nx.need}</b> more for ${nx.key}` : rk.key === 'A5' ? 'Zero flops and 5 Godly for <b>A5+</b>' : 'Top rank!');
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(Math.max(0, rk.index)); } }, 350);
-    $('rNew').innerHTML = isNew && g.score > 0 ? '<span class="new">自己ベスト更新！</span>' : '';
-    $('rBest').innerHTML = best > 0 ? `本番の自己ベスト <b>${Math.max(best, g.score)}</b>` : 'はじめての本番の記録';
+    $('rNew').innerHTML = isNew && g.score > 0 ? `<span class="new">${jaen('自己ベスト更新！', 'New best!')}</span>` : '';
+    $('rBest').innerHTML = best > 0 ? jaen(`本番の自己ベスト <b>${Math.max(best, g.score)}</b>`, `Showtime best <b>${Math.max(best, g.score)}</b>`) : jaen('はじめての本番の記録', 'Your first Showtime score');
   }
 
   // ===== 当たり判定 =====
@@ -489,10 +502,10 @@
   function tap(h) {
     if (!h) { held = null; return; }
     if (h.kind === 'pause') { pause(true); return; }
-    if (h.kind === 'sound') { const lv = YS.cycle(); float(315, 64, ['音あり', '音楽だけ消した', '音を消した'][lv], '#fff', 13, 1.2); return; }
+    if (h.kind === 'sound') { const lv = YS.cycle(); float(315, 64, jaen(['音あり', '音楽だけ消した', '音を消した'], ['Sound on', 'Music off', 'Muted'])[lv], '#fff', 13, 1.2); return; }
     if (h.kind === 'junk') { held = null; YG.discard(g, h.id); return; }
-    if (h.kind === 'tray' && h.type === 'toku' && g.toku <= 0) { YS.deny(); float(L.trayX[3], L.trayY - 60, '審査員が来たら焼ける', '#ffd84d', 13); held = null; return; }
-    if (h.kind === 'tray' && h.type !== 'toku' && !g.R.types.includes(h.type)) { YS.deny(); float(L.trayX[YG.TRAY_KEYS.indexOf(h.type)], L.trayY - 60, 'このステージでは使わない', '#ffd84d', 13); held = null; return; }
+    if (h.kind === 'tray' && h.type === 'toku' && g.toku <= 0) { YS.deny(); float(L.trayX[3], L.trayY - 60, jaen('審査員が来たら焼ける', 'Critic only'), '#ffd84d', 13); held = null; return; }
+    if (h.kind === 'tray' && h.type !== 'toku' && !g.R.types.includes(h.type)) { YS.deny(); float(L.trayX[YG.TRAY_KEYS.indexOf(h.type)], L.trayY - 60, jaen('このステージでは使わない', 'Not this stage'), '#ffd84d', 13); held = null; return; }
     if (h.kind === 'tray') { held = held && held.kind === 'new' && held.type === h.type ? null : { kind: 'new', type: h.type }; return; }
     if (h.kind === 'slot') {
       if (h.id) { // 置いてある肉：タップで裏返す
@@ -529,14 +542,14 @@
     if (h.kind === 'slot') { if (!h.id) YG.moveToSlot(g, m.id, h.i); else if (h.id !== m.id) YS.deny(); return; }
     if (h.kind === 'plate') {
       if (h.id == null) YG.toPlate(g, m.id, h.p);
-      else if (h.id !== m.id) { YS.deny(); float(L.plateX[h.p], L.plateY - 40, '皿がいっぱい', '#ffb3a0', 13); }
+      else if (h.id !== m.id) { YS.deny(); float(L.plateX[h.p], L.plateY - 40, jaen('皿がいっぱい', 'Plates full'), '#ffb3a0', 13); }
       return;
     }
     if (h.kind === 'trash') { YG.discard(g, m.id); return; }
     if (h.kind === 'seat') {
       // 余熱がまだ（網の上・皿で余熱中）なら、皿に置いて「出す予定」にする。余熱が終わったら自動で出る
       const r = YG.reserve(g, m.id, h.i);
-      if (!r.ok && r.why === 'full') { YS.deny(); float(L.seatX[h.i], 130, '皿がいっぱい', '#ffb3a0', 14); }
+      if (!r.ok && r.why === 'full') { YS.deny(); float(L.seatX[h.i], 130, jaen('皿がいっぱい', 'Plates full'), '#ffb3a0', 14); }
       else if (!r.ok && r.why === 'noone') YS.deny();
     }
   }
@@ -549,7 +562,8 @@
   function banner(text, sub, color, life) { banners = []; banners.push({ text, sub, color, t: 0, life: Math.min(1.4, life || 1.4) }); }
   function smoke(x, y, dark) { fx.push({ k: 'smoke', x: x + (Math.random() - 0.5) * 40, y, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, t: 0, life: 1.4, r: 8, dark }); }
 
-  const RANK_TEXT = { perfect: '神焼き!!', great: 'うまい!', good: 'ふつう', meh: 'いまいち', miss: 'ちがう…', raw: 'ナマ!', halfraw: '片面ナマ', burnt: 'コゲ', char: '炭', cold: '冷めた', leave: '帰った' };
+  const RANK_TEXT = jaen({ perfect: '神焼き!!', great: 'うまい!', good: 'ふつう', meh: 'いまいち', miss: 'ちがう…', raw: 'ナマ!', halfraw: '片面ナマ', burnt: 'コゲ', char: '炭', cold: '冷めた', leave: '帰った' },
+    { perfect: 'GODLY!!', great: 'Tasty!', good: 'Fine', meh: 'Meh', miss: 'Nope...', raw: 'RAW!', halfraw: 'Half raw', burnt: 'Burnt', char: 'Charcoal', cold: 'Cold', leave: 'Gone' });
   const nReact = {};
   function handleEvents() {
     const evs = g.events; g.events = [];
@@ -558,19 +572,19 @@
       else if (ev.type === 'flip') { YS.flip(); if (tut === 1) setTut(2); }
       else if (ev.type === 'move') YS.flip();
       else if (ev.type === 'plate') { YS.plate(); if (tut <= 2 && ev.fromGrill) setTut(3); }
-      else if (ev.type === 'discard') { YS.discard(); store.set('yaki.didDiscard', 1); burst(L.trash.x, L.trash.y - 24, 10, '#9aa3aa', 70, 90); float(L.trash.x, L.trash.y - 30, 'ポイ', '#fff', 14, 0.8); if (ev.cost) float(L.trash.x, L.trash.y - 50, '肉代 −' + ev.cost, '#ff9a8a', 15); }
-      else if (ev.type === 'reserve') { YS.plate(); float(L.plateX[ev.plate], L.plateY - 50, '余熱が終わったら出す', '#ffe14d', 12); if (tut === 3) setTut(4); }
-      else if (ev.type === 'reserveLost') { YS.deny(); float(L.plateX[ev.plate], L.plateY - 50, '出す予定の客が帰った', '#ff9a8a', 12); }
+      else if (ev.type === 'discard') { YS.discard(); store.set('yaki.didDiscard', 1); burst(L.trash.x, L.trash.y - 24, 10, '#9aa3aa', 70, 90); float(L.trash.x, L.trash.y - 30, jaen('ポイ', 'Toss!'), '#fff', 14, 0.8); if (ev.cost) float(L.trash.x, L.trash.y - 50, jaen('肉代 −', 'Meat −') + ev.cost, '#ff9a8a', 15); }
+      else if (ev.type === 'reserve') { YS.plate(); float(L.plateX[ev.plate], L.plateY - 50, jaen('余熱が終わったら出す', 'Serves once it rests'), '#ffe14d', 12); if (tut === 3) setTut(4); }
+      else if (ev.type === 'reserveLost') { YS.deny(); float(L.plateX[ev.plate], L.plateY - 50, jaen('出す予定の客が帰った', 'They walked out'), '#ff9a8a', 12); }
       else if (ev.type === 'rested') { YS.rested(); burst(L.plateX[ev.plate], L.plateY, 6, '#ffd84d', 80, 60); }
       else if (ev.type === 'burning') { YS.burning(); }
-      else if (ev.type === 'fever') { YS.fever(); YS.buzz([30, 30, 30]); banner('フィーバー！', '10秒間 点数×' + YG.CFG.feverMult, '#ffd84d'); burst(200, 460, 50, '#ffd84d', 400, 300); }
-      else if (ev.type === 'feverMore') { YS.fever(); banner('フィーバー延長！', '+' + YG.CFG.feverTime + '秒', '#ffd84d', 1.2); }
-      else if (ev.type === 'feverEnd') { YS.feverEnd(); if (ev.broken) banner('フィーバー終了…', '失敗でメーターが0に', '#ff9a8a', 1.2); }
-      else if (ev.type === 'vip') { YS.vip(); banner('審査員が来た！', '特上カルビで 点数×' + YG.CFG.vipMult, '#ffd84d', 2); }
-      else if (ev.type === 'lastOrder') { YS.lastOrder(); banner('ラストオーダー！', '客がどっと来る', '#ff7a2f', 1.6); }
+      else if (ev.type === 'fever') { YS.fever(); YS.buzz([30, 30, 30]); banner(jaen('フィーバー！', 'FEVER!'), jaen('10秒間 点数×', 'Points ×') + YG.CFG.feverMult + jaen('', ' for 10 sec'), '#ffd84d'); burst(200, 460, 50, '#ffd84d', 400, 300); }
+      else if (ev.type === 'feverMore') { YS.fever(); banner(jaen('フィーバー延長！', 'MORE FEVER!'), '+' + YG.CFG.feverTime + jaen('秒', ' sec'), '#ffd84d', 1.2); }
+      else if (ev.type === 'feverEnd') { YS.feverEnd(); if (ev.broken) banner(jaen('フィーバー終了…', 'Fever over...'), jaen('失敗でメーターが0に', 'A flop killed the meter'), '#ff9a8a', 1.2); }
+      else if (ev.type === 'vip') { YS.vip(); banner(jaen('審査員が来た！', 'THE CRITIC IS HERE!'), jaen('特上カルビで 点数×', 'Prime Kalbi: points ×') + YG.CFG.vipMult, '#ffd84d', 2); }
+      else if (ev.type === 'lastOrder') { YS.lastOrder(); banner(jaen('ラストオーダー！', 'LAST CALL!'), jaen('客がどっと来る', 'Here comes the rush'), '#ff7a2f', 1.6); }
       else if (ev.type === 'leave') {
         YS.leave(); YS.buzz(80);
-        if (ev.vip) banner('審査員が帰った…', '', '#ff9a8a', 1.2);
+        if (ev.vip) banner(jaen('審査員が帰った…', 'The critic left...'), '', '#ff9a8a', 1.2);
         const seat = g.seats[ev.seat];
         react[ev.seat] = YL.line({ fail: 'leave', rank: 'fail' }, seat.cust.char, bump('leave'));
       } else if (ev.type === 'serve') {
@@ -581,7 +595,7 @@
         react[ev.seat] = info;
         const x = L.seatX[ev.seat];
         const good = r.rank === 'perfect' || r.rank === 'great';
-        if (g.stage) { if (YG.goodRank(r)) float(x, L.counterY + 22, '+1枚', '#ffd84d', 20, 1.3); } // ステージは枚数で数える
+        if (g.stage) { if (YG.goodRank(r)) float(x, L.counterY + 22, jaen('+1枚', '+1'), '#ffd84d', 20, 1.3); } // ステージは枚数で数える
         else if (e.pts) float(x, L.counterY + 22, '+' + e.pts, '#ffd84d', 20, 1.3); // 点はカウンターの上（顔に重ねない）
         if (e.combo >= 2 && good) comboPop = 1;
         if (r.fail) YS.buzz([60, 40, 60]); else if (r.rank === 'perfect') YS.buzz(25);
@@ -595,26 +609,26 @@
         else if (r.rank === 'meh') YS.meh();
         else YS.fail();
         if (tut === 3) setTut(4);
-      } else if (ev.type === 'end') { YS.end(); endAt = clock; if (ev.leftoverCost) float(200, 440, '残した肉 −' + ev.leftoverCost, '#ff9a8a', 20, 1.4); }
+      } else if (ev.type === 'end') { YS.end(); endAt = clock; if (ev.leftoverCost) float(200, 440, jaen('残した肉 −', 'Leftovers −') + ev.leftoverCost, '#ff9a8a', 20, 1.4); }
     }
   }
   // ステージの案内：まだ★1を取っていないステージだけ、起きたときに1回だけ
   function showTip(key, x, y, text) { if (tipsDone[key]) return; tipsDone[key] = 1; tip = { x, y, text, t: 0 }; }
   function checkTips(dt) {
     if (tip) { tip.t += dt; if (tip.t > 3.2) tip = null; }
-    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 30, j.y + 36, '×をタップで すてる'); }
+    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 30, j.y + 36, jaen('×をタップで すてる', 'Tap the × to toss it')); }
     if (!g.stage || tut < 4 || g.state !== 'play' || (starsMap()[g.stage] || 0) >= 1) return;
     const k = g.stage;
     for (let i = 0; i < 6; i++) {
       const id = g.grill[i]; if (!id) continue;
       const m = g.meats[id], b = m.side[1 - m.up], s = L.slot(i);
-      if (k === 2 && b > 0.5 && b < 0.9) showTip('juice', s.x, s.y + 66, '肉汁＝下が焼けた合図');
-      if (k === 2 && b > 1.15) showTip('smoke', s.x, s.y + 66, '煙＝下が焦げはじめ！ 返すか上げる');
-      if (k === 4 && YG.fireName(i, g.R.fires) === 'strong' && b > 1.0) showTip('strong', s.x, s.y + 66, '焦げそう？ 弱火へドラッグで逃がせる');
+      if (k === 2 && b > 0.5 && b < 0.9) showTip('juice', s.x, s.y + 66, jaen('肉汁＝下が焼けた合図', "Juice means the bottom's done"));
+      if (k === 2 && b > 1.15) showTip('smoke', s.x, s.y + 66, jaen('煙＝下が焦げはじめ！ 返すか上げる', 'Smoke! Flip it or pull it'));
+      if (k === 4 && YG.fireName(i, g.R.fires) === 'strong' && b > 1.0) showTip('strong', s.x, s.y + 66, jaen('焦げそう？ 弱火へドラッグで逃がせる', 'Burning? Drag it to low heat'));
     }
-    if (k === 3) g.seats.forEach((st, i) => { if (st.state === 'wait' && st.cust.order.target !== 'hodo') showTip('target', L.seatX[i], 232, '焼き色の見本に合わせる'); });
-    if (k === 5) g.plates.forEach((id, p) => { if (id && g.meats[id].rest && !g.meats[id].restDone) showTip('carry', L.plateX[p], L.plateY + 56, '輪が回るあいだは、まだ焼ける'); });
-    if (k === 6 && YG.activeCount(g) >= 3) showTip('busy', 200, L.counterY + 50, '3枚同時で 点×1.2！');
+    if (k === 3) g.seats.forEach((st, i) => { if (st.state === 'wait' && st.cust.order.target !== 'hodo') showTip('target', L.seatX[i], 232, jaen('焼き色の見本に合わせる', 'Match the color sample')); });
+    if (k === 5) g.plates.forEach((id, p) => { if (id && g.meats[id].rest && !g.meats[id].restDone) showTip('carry', L.plateX[p], L.plateY + 56, jaen('輪が回るあいだは、まだ焼ける', 'Still cooking while the ring fills')); });
+    if (k === 6 && YG.activeCount(g) >= 3) showTip('busy', 200, L.counterY + 50, jaen('3枚同時で 点×1.2！', '3 at once: points ×1.2!'));
   }
   function bump(k) { nReact[k] = (nReact[k] || 0) + 1; return nReact[k] - 1; }
   function setTut(n) { tut = n; if (n >= 4) store.set('yaki.tut', 4); }
@@ -634,8 +648,8 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
-      if (prevState === 'ready' && g.state === 'play') banner('スタート！', g.stage ? g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！' : '道具なし・腕だけで ' + g.R.duration + '秒', '#ffd84d', 1.4);
-      if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner('のこり10秒！', '', '#ff5a3a', 1.2); }
+      if (prevState === 'ready' && g.state === 'play') banner(jaen('スタート！', 'GO!'), g.stage ? jaen(g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！', 'Nail ' + YG.STAGES[g.stage - 1].stars[0] + ' in ' + g.R.duration + ' sec!') : jaen('道具なし・腕だけで ' + g.R.duration + '秒', 'No tools. Just skill. ' + g.R.duration + ' sec'), '#ffd84d', 1.4);
+      if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner(jaen('のこり10秒！', '10 SEC LEFT!'), '', '#ff5a3a', 1.2); }
       prevState = g.state;
       checkTips(dt);
       // ランクが上がったら、上の欄でポンと知らせる
@@ -773,7 +787,7 @@
     }
     if (g.state === 'over') {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(ext.x0, ext.y0, ext.x1 - ext.x0, ext.y1 - ext.y0);
-      bigText('そこまで！', 200, 380, 52, '#ffd84d');
+      bigText(jaen('そこまで！', "TIME'S UP!"), 200, 380, jaen(52, 46), '#ffd84d');
     }
   }
   // 大きな知らせ（カウンターの帯に重ねる。操作は止めない）。点などの浮く文字はこの上に描く
@@ -836,8 +850,8 @@
     if (rankPop > 0) { // ランクアップの知らせ
       ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
       ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
-      ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
-      ctx.fillStyle = '#ffd84d'; ctx.fillText('ランクUP!', 262, 66 - (1 - rankPop) * 8);
+      ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(jaen('ランクUP!', 'RANK UP!'), 262, 66 - (1 - rankPop) * 8);
+      ctx.fillStyle = '#ffd84d'; ctx.fillText(jaen('ランクUP!', 'RANK UP!'), 262, 66 - (1 - rankPop) * 8);
       ctx.restore();
     }
     }
@@ -886,7 +900,7 @@
       const n = YG.starsOf(g), goal = YG.starNeed(g.stage, g.up.steps)[Math.min(2, n)];
       const tx = g.stats.ok + '/' + goal;
       YD.say(ctx, tx, 12, 34, 22, n ? '#ffd84d' : '#fff', { big: true, align: 'left', lw: 6 });
-      const w = ctx.measureText(tx).width; YD.say(ctx, '枚', 15 + w, 34, 13, '#ffe9cf', { align: 'left', lw: 4 });
+      const w = ctx.measureText(tx).width; YD.say(ctx, jaen('枚', ''), 15 + w, 34, 13, '#ffe9cf', { align: 'left', lw: 4 });
       lx = Math.max(80, 12 + w + 32);
     } else {
     YD.say(ctx, '¥', 12, 34, 15, '#ffd84d', { big: true, align: 'left', lw: 5 });
@@ -895,11 +909,11 @@
     }
     if (g.combo >= 2) {
       ctx.save(); ctx.translate(lx, 24); ctx.rotate(-0.08); ctx.scale(1 + comboPop * 0.4, 1 + comboPop * 0.4);
-      YD.say(ctx, g.combo + 'コンボ', 0, 0, 18, '#ff9a3f', { big: true, align: 'left', lw: 5.5 });
+      YD.say(ctx, g.combo + jaen('コンボ', ' combo'), 0, 0, 18, '#ff9a3f', { big: true, align: 'left', lw: 5.5 });
       ctx.restore();
     }
     const busy = YG.activeCount(g);
-    if (g.R.busy && busy >= 2 && g.state === 'play') YD.say(ctx, busy + '枚同時 ×' + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 40, 12, '#ffe9cf', { align: 'left', lw: 4 });
+    if (g.R.busy && busy >= 2 && g.state === 'play') YD.say(ctx, busy + jaen('枚同時 ×', ' at once ×') + (1 + YG.CFG.busyStep * (busy - 1)).toFixed(1), lx, 40, 12, '#ffe9cf', { align: 'left', lw: 4 });
     // 音・一時停止ボタン
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 4;
@@ -917,11 +931,11 @@
       const gy = L.grill.y + L.grill.h / 2, bob = Math.sin(t * 4) * 3;
       ctx.save(); ctx.translate(200, gy - 22 + bob); ctx.rotate(-0.04);
       if (g.stage) YD.say(ctx, YG.STAGES[g.stage - 1].name, 0, 0, 30, '#ffd84d', { big: true, lw: 8 });
-      else YD.say(ctx, '本番', 0, 0, 34, '#ffd84d', { big: true, lw: 8 });
+      else YD.say(ctx, jaen('本番', 'Showtime'), 0, 0, 34, '#ffd84d', { big: true, lw: 8 });
       ctx.restore();
-      YD.say(ctx, '肉を1枚置いたら スタート', 200, gy + 20, 17, '#fff', { lw: 5.5 });
-      YD.say(ctx, g.R.duration + '秒', 200, gy + 46, 17, '#ffe2bf', { lw: 5.5 });
-      if (!g.stage && g.shopSteps) YD.say(ctx, '本番は道具なし。腕だけの勝負', 200, gy + 76, 14, '#ffd84d', { lw: 4.5 }); // 道具を強くした人にだけ
+      YD.say(ctx, jaen('肉を1枚置いたら スタート', 'Drop one piece to start'), 200, gy + 20, 17, '#fff', { lw: 5.5 });
+      YD.say(ctx, g.R.duration + jaen('秒', ' sec'), 200, gy + 46, 17, '#ffe2bf', { lw: 5.5 });
+      if (!g.stage && g.shopSteps) YD.say(ctx, jaen('本番は道具なし。腕だけの勝負', 'No tools in Showtime. Just skill'), 200, gy + 76, 14, '#ffd84d', { lw: 4.5 }); // 道具を強くした人にだけ
     }
   }
   // 説明：やることを、その場所に1つずつ出す。指が動いて、どう触るかを見せる
@@ -934,27 +948,27 @@
       const tx = L.trayX[YG.TRAY_KEYS.indexOf(ty)];
       const free = [1, 0, 2, 4, 3, 5].find((i) => !g.grill[i]);
       if (free != null && !(ptr && ptr.drag)) { const s = L.slot(free); guide(tx, L.trayY - 6, s.x, s.y, t, YD.trayMeat(ty)); }
-      x = tx; y = L.trayY - 74; text = '① ' + YG.TYPES[ty].name + 'を網へドラッグ';
+      x = tx; y = L.trayY - 74; text = '① ' + jaen(YG.TYPES[ty].name + 'を網へドラッグ', 'Drag ' + YG.TYPES[ty].name + ' onto the grill');
     } else if (tut === 1) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
       x = s.x; y = s.y + 76; dir = -1;
-      if (m.side[1 - m.up] < 0.45) text = '② 待つ：肉汁が浮いたら裏返しどき';
-      else { text = '② 肉汁が出た！ タップで裏返す'; tapGuide(s.x, s.y, t); }
+      if (m.side[1 - m.up] < 0.45) text = jaen('② 待つ：肉汁が浮いたら裏返しどき', '② Wait. Juice on top means flip');
+      else { text = jaen('② 肉汁が出た！ タップで裏返す', '② Juice! Tap to flip'); tapGuide(s.x, s.y, t); }
     } else if (tut === 2) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
-      if (Math.min(m.side[0], m.side[1]) < 0.55) { x = s.x; y = s.y + 76; text = '③ 裏も焼けるまで待つ'; dir = -1; }
+      if (Math.min(m.side[0], m.side[1]) < 0.55) { x = s.x; y = s.y + 76; text = jaen('③ 裏も焼けるまで待つ', '③ Let the other side cook'); dir = -1; }
       else {
         const p = [1, 0, 2].find((k) => !g.plates[k]);
         if (p != null && !(ptr && ptr.drag)) guide(s.x, s.y, L.plateX[p], L.plateY, t, m);
-        x = s.x; y = s.y + 76; text = '③ 焼けた！ 皿へドラッグ'; dir = -1;
+        x = s.x; y = s.y + 76; text = jaen('③ 焼けた！ 皿へドラッグ', '③ Done! Drag it to a plate'); dir = -1;
       }
     } else if (tut === 3) {
       const r = serveRoute();
       if (!r) return;
       if (!(ptr && ptr.drag)) guide(L.plateX[r.p], L.plateY, L.seatX[r.seat], L.headY, t, g.meats[r.id]);
-      x = L.seatX[r.seat]; y = L.counterY + 10; dir = -1; text = '④ 顔へドラッグで食べさせる';
+      x = L.seatX[r.seat]; y = L.counterY + 10; dir = -1; text = jaen('④ 顔へドラッグで食べさせる', '④ Drag it to their face');
     }
     if (!text) return;
     bubble(x, y, text, dir, t);
@@ -977,7 +991,7 @@
     const m = g.meats[r.id];
     if (!m.restDone) return;
     guide(L.plateX[r.p], L.plateY, L.seatX[r.seat], L.headY, t, m);
-    bubble(L.seatX[r.seat], L.counterY + 10, '顔へドラッグで食べさせる', -1, t);
+    bubble(L.seatX[r.seat], L.counterY + 10, jaen('顔へドラッグで食べさせる', 'Drag it to their face'), -1, t);
   }
   // 指の見本：(x0,y0) を押して (x1,y1) まで運ぶ。点線の道すじと矢印も出す
   function guide(x0, y0, x1, y1, t, meat) {
