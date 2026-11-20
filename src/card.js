@@ -123,6 +123,11 @@
     inked(ctx, jaen('焼肉', 'YAKINIKU', '烤肉'), 120, 92, 50, F, '#ff5a3a', { rot: -0.07, align: 'left', depth: 5 });
     inked(ctx, jaen('ジュー', 'JUU', '滋滋'), 84, 196, 150, F, '#ffd84d', { rot: -0.09, align: 'left', lw: 26, depth: 16, under: '#a3261b' });
 
+    // 今日の網：ロゴの下に日付とお題
+    if (g.daily) {
+      const k = g.daily.key, d = `${Math.floor(k / 100) % 100}/${k % 100}`;
+      inked(ctx, jaen(`今日の網 ${d}「${g.daily.name}」`, `Today's Grill ${d}: ${g.daily.name}`, `今日烤网 ${d}「${g.daily.name}」`), 96, 300, 38, H, '#ff9b5a', { rot: -0.04, align: 'left', depth: 0, lw: 10, maxW: 600 });
+    }
     // 判子（右上）：本番はランク、ステージは★
     const sr = rnd;
     if (g.stage) {

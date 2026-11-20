@@ -565,3 +565,38 @@ test('★の目標：★1・★2 は決まった数、★3 だけ道具ぶん上
   g.stats.ok = base[2]; assert.equal(YG.starsOf(g), 2, '道具が最高なら、元の★3の枚数では★2');
   g.stats.ok = base[2] + 3; assert.equal(YG.starsOf(g), 3);
 });
+
+test('今日の網：同じ日は同じお題・同じ並び、7日でお題が全部出る', () => {
+  const a = YG.dailyOf(20261120), b = YG.dailyOf(20261120);
+  assert.strictEqual(a.twist, b.twist);
+  assert.strictEqual(a.seed, b.seed);
+  assert.notStrictEqual(YG.dailyOf(20261121).seed, a.seed);
+  // 区切りの7日（1970年1月1日から数えた7日ごと）では、7つのお題が1回ずつ出る
+  for (const wk of [2916, 2917, 2918]) {
+    const seen = new Set();
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date((wk * 7 + i) * 864e5), key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+      seen.add(YG.dailyOf(key).twist);
+    }
+    assert.strictEqual(seen.size, YG.DAILY.length);
+  }
+  const g1 = YG.newGame({ daily: 20261120 }), g2 = YG.newGame({ daily: 20261120 });
+  assert.strictEqual(g1.stage, 0);
+  assert.strictEqual(g1.seed, g2.seed);
+  assert.deepStrictEqual(g1.R.types, Object.assign(YG.ruleOf(0), a.rule).types);
+  assert.strictEqual(g1.daily.twist, a.twist);
+});
+
+test('今日の網：同じ日・同じ遊び方なら、客の注文の並びが同じ', () => {
+  const run = () => {
+    const g = YG.newGame({ daily: 20261120 });
+    YG.place(g, 'kalbi', 0);
+    const orders = [];
+    for (let i = 0; i < 400; i++) {
+      YG.step(g, 0.05);
+      g.seats.forEach((s) => { if (s.cust && !s.cust._seen) { s.cust._seen = 1; orders.push(s.cust.order.type + ':' + s.cust.order.target); } });
+    }
+    return orders.join(',');
+  };
+  assert.strictEqual(run(), run());
+});

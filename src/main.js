@@ -182,13 +182,20 @@
   $('rStages').onclick = showStages;
   $('stagesClose').onclick = () => { $('stages').hidden = true; if (mode === 'result') $('result').hidden = false; else toTitle(); };
 
-  function newRun(k) {
+  // 今日の網：日本時間の日付（どの国で遊んでも同じ日は同じ網）
+  let dailyMode = false;
+  function todayKey() { const d = new Date(Date.now() + 9 * 3600e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); }
+  function dailyRec() { const r = store.get('yaki.daily', null); return r && r.key === todayKey() ? r : { key: todayKey(), best: 0, tries: 0, rank: null }; }
+  const mmdd = (key) => `${Math.floor(key / 100) % 100}/${key % 100}`;
+  function startDaily() { if (window.YP && !YP.canStart()) return; stage = 0; newRun(0, true); }
+  function newRun(k, daily) {
     if (window.YP && !YP.canStart()) return; // 試遊会：名前を入れてから
     if (g && mode === 'play' && window.YP) YP.quit(g, 'retry');
     if (k != null) stage = k;
+    dailyMode = !!daily;
     // 説明：ステージ1は★1を取るまで毎回。本番などは、はじめての1回だけ
     tut = (stage === 1 && !(starsMap()[1] >= 1)) || store.get('yaki.tut', 0) < 4 ? 0 : 4;
-    g = YG.newGame({ tutorial: tut < 4 && stage <= 1, stage, tools: store.get('yaki.tools', {}) });
+    g = YG.newGame({ tutorial: tut < 4 && stage <= 1, stage, tools: store.get('yaki.tools', {}), daily: dailyMode ? todayKey() : null });
     held = null; ptr = null; fx = []; react.fill(null); cuts.fill(null); shake = 0; endAt = 0; lastTick = -1;
     banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {}; prevState = null; warned10 = false;
     acc = 0; last = null;
@@ -197,7 +204,7 @@
     YS.unlock();
     if (window.YP) YP.start(g);
     if (window.YQ) YQ.start();
-    if (window.YC) YC.hit(stage ? 'start-s' + stage : 'start-honban');
+    if (window.YC) YC.hit(dailyMode ? 'start-daily' : stage ? 'start-s' + stage : 'start-honban');
   }
   function pause(on) {
     if (!g || mode !== 'play' || g.state === 'over') return;
@@ -217,7 +224,7 @@
     ['pause', 'result', 'stages', 'intro', 'levels', 'tools', 'cardView'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
     YS.silence();
-    showBest();
+    showBest(); showDailyBtn();
   }
   // ===== 店のレベルと道具 =====
   function shopState() {
@@ -308,6 +315,17 @@
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}${jaen('　', ' &nbsp; ', '　')}` : '') + (b ? jaen(`本番の自己ベスト <b>${b}</b>`, `Showtime best <b>${b}</b>`, `正式营业最佳 <b>${b}</b>`) + (br ? jaen(`　最高ランク <b>${brName}</b>`, ` &nbsp; Top rank <b>${brName}</b>`, `　最高等级 <b>${brName}</b>`) : '') : '');
   }
   showBest();
+  // タイトルの「今日の網」：1回でも遊んだ人に出す
+  function showDailyBtn() {
+    const b = $('dailyBtn');
+    if (!(store.get('yaki.plays', 0) > 0)) { b.hidden = true; return; }
+    const key = todayKey(), t = YG.dailyOf(key), r = dailyRec();
+    b.hidden = false;
+    b.innerHTML = jaen(`今日の網 <small>${mmdd(key)}</small> <b>${t.name}</b>`, `Today's Grill <small>${mmdd(key)}</small> <b>${t.name}</b>`, `今日烤网 <small>${mmdd(key)}</small> <b>${t.name}</b>`) +
+      (r.tries ? `<span class="db">${jaen(`今日のベスト ${r.best}`, `Today's best ${r.best}`, `今日最佳 ${r.best}`)}</span>` : `<span class="db">${jaen('全員おなじ網。今日だけ', 'Same grill for everyone. Today only', '所有人同一张网，仅限今天')}</span>`);
+  }
+  showDailyBtn();
+  $('dailyBtn').onclick = startDaily;
   $('titleBoss').src = bossImg('grin');
   // 文字の形（Potta One・Yusei Magic）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
   (function waitFont() {
@@ -321,10 +339,10 @@
   $('lvBtn').onclick = showLevels;
   // ゲームサイト版：結果からもう一度遊ぶときに、区切りの広告をはさむ（出すかどうかはサイトが決める）
   const afterAd = (fn) => (window.YQ ? YQ.breakAd(fn) : fn());
-  $('againBtn').onclick = () => afterAd(() => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); });
-  $('rRetry').onclick = () => afterAd(() => newRun(stage));
+  $('againBtn').onclick = () => afterAd(() => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage, dailyMode); });
+  $('rRetry').onclick = () => afterAd(() => newRun(stage, dailyMode));
   $('resumeBtn').onclick = () => pause(false);
-  $('retryBtn').onclick = () => newRun(stage);
+  $('retryBtn').onclick = () => newRun(stage, dailyMode);
   $('toTitleBtn').onclick = toTitle;
   $('rTitleBtn').onclick = toTitle;
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
@@ -360,7 +378,7 @@
     if (card && card.url) URL.revokeObjectURL(card.url);
     card = null;
     if (window.YK) { const mine = g; YK.make(g).then((c) => { if (g === mine) card = c; }).catch(() => {}); }
-    if (window.YC) YC.hit(g.stage ? `end-s${g.stage}-star${YG.starsOf(g)}` : 'end-honban-' + YG.shopRank(g).key);
+    if (window.YC) YC.hit(g.stage ? `end-s${g.stage}-star${YG.starsOf(g)}` : (g.daily ? 'end-daily-' : 'end-honban-') + YG.shopRank(g).key);
     $('result').hidden = false;
   }
   // 自慢する：結果を X・LINE などに送る文
@@ -374,6 +392,12 @@
         `沙雕烤肉游戏《滋滋》\n第${k}关「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\n烤好了 ${g.stats.ok} 片\n称号「${tt.name}」`);
     }
     const rk = YG.shopRank(g);
+    if (g.daily) {
+      const d = mmdd(g.daily.key);
+      return jaen(`焼肉のクソゲー「ジュー」\n今日の網 ${d}「${g.daily.name}」\n${rk.name}「${rk.word}」 売上 ¥${g.score}\n称号「${tt.name}」\nきみは何円いける？`,
+        `JUU, the dumbest yakiniku game\nToday's Grill ${d}: ${g.daily.name}\n${rk.name} (${rk.word}) Sales ¥${g.score}\nTitle: ${tt.name}\nCan you beat it?`,
+        `沙雕烤肉游戏《滋滋》\n今日烤网 ${d}「${g.daily.name}」\n${rk.name}「${rk.word}」 营业额 ¥${g.score}\n称号「${tt.name}」\n你能赚多少？`);
+    }
     return jaen(`焼肉のクソゲー「ジュー」\n本番 ${rk.name}「${rk.word}」\n売上 ¥${g.score}\n称号「${tt.name}」`,
       `JUU, the dumbest yakiniku game\nShowtime rank ${rk.name}: ${rk.word}\nSales ¥${g.score}\nTitle: ${tt.name}`,
       `沙雕烤肉游戏《滋滋》\n正式营业 ${rk.name}「${rk.word}」\n营业额 ¥${g.score}\n称号「${tt.name}」`);
@@ -434,15 +458,17 @@
     }
   }
   function showFreeResult() {
-    const best = store.get('yaki.best', 0);
+    const dr = g.daily ? dailyRec() : null;
+    const best = dr ? dr.best : store.get('yaki.best', 0);
     const isNew = g.score > best && best > 0;
-    if (g.score > best) store.set('yaki.best', g.score);
+    if (dr) { dr.tries++; if (g.score > dr.best) { dr.best = g.score; dr.rank = YG.shopRank(g).name; } store.set('yaki.daily', dr); }
+    else if (g.score > best) store.set('yaki.best', g.score);
     // ランクの判子
     const rk = YG.shopRank(g);
     const order = ['kikaku', 'C', 'B', 'A3', 'A4', 'A5', 'tokusen'];
     const bestRank = store.get('yaki.bestRank', null);
     const rkName = rk.key === 'kikaku' ? null : rk.name;
-    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(TOKUSEN.test(bestRank) ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
+    if (rkName && !dr && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(TOKUSEN.test(bestRank) ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
     const stamp = $('rRank');
     stamp.className = 'rank r-' + rk.key;
     stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? jaen('（売上だけなら ' + rk.byScore + '）', 'Sales alone: ' + rk.byScore, '光看营业额是 ' + rk.byScore) : rk.word}</span>`;
@@ -453,6 +479,7 @@
       rk.key === 'kikaku' ? '烤焦太多，没法评级' : nx ? `离${nx.key}还差 <b>${nx.need}</b> 分` : rk.key === 'A5' ? '零失手＋神级5片，就是 <b>特选A5</b>' : '最高等级！');
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(Math.max(0, rk.index)); } }, 350);
     $('rNew').innerHTML = isNew && g.score > 0 ? `<span class="new">${jaen('自己ベスト更新！', 'New best!')}</span>` : '';
+    if (dr) { $('rBest').innerHTML = jaen(`今日の網 ${mmdd(dr.key)}「${g.daily.name}」　${dr.tries}回目　今日のベスト <b>${dr.best}</b>`, `Today's Grill ${mmdd(dr.key)}: ${g.daily.name} &nbsp; Try ${dr.tries} &nbsp; Today's best <b>${dr.best}</b>`, `今日烤网 ${mmdd(dr.key)}「${g.daily.name}」　第${dr.tries}次　今日最佳 <b>${dr.best}</b>`); return; }
     $('rBest').innerHTML = best > 0 ? jaen(`本番の自己ベスト <b>${Math.max(best, g.score)}</b>`, `Showtime best <b>${Math.max(best, g.score)}</b>`, `正式营业最佳 <b>${Math.max(best, g.score)}</b>`) : jaen('はじめての本番の記録', 'Your first Showtime score');
   }
 
@@ -685,7 +712,7 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
-      if (prevState === 'ready' && g.state === 'play') banner(jaen('スタート！', 'GO!'), g.stage ? jaen(g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！', 'Nail ' + YG.STAGES[g.stage - 1].stars[0] + ' in ' + g.R.duration + ' sec!', g.R.duration + '秒内烤好 ' + YG.STAGES[g.stage - 1].stars[0] + ' 片！') : jaen('道具なし・腕だけで ' + g.R.duration + '秒', 'No tools. Just skill. ' + g.R.duration + ' sec', '不用道具，全凭手艺 ' + g.R.duration + '秒'), '#ffd84d', 1.4);
+      if (prevState === 'ready' && g.state === 'play') banner(jaen('スタート！', 'GO!'), g.stage ? jaen(g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！', 'Nail ' + YG.STAGES[g.stage - 1].stars[0] + ' in ' + g.R.duration + ' sec!', g.R.duration + '秒内烤好 ' + YG.STAGES[g.stage - 1].stars[0] + ' 片！') : g.daily ? jaen(`今日の網「${g.daily.name}」`, `Today's Grill: ${g.daily.name}`, `今日烤网「${g.daily.name}」`) : jaen('道具なし・腕だけで ' + g.R.duration + '秒', 'No tools. Just skill. ' + g.R.duration + ' sec', '不用道具，全凭手艺 ' + g.R.duration + '秒'), '#ffd84d', 1.4);
       if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner(jaen('のこり10秒！', '10 SEC LEFT!'), '', '#ff5a3a', 1.2); }
       prevState = g.state;
       checkTips(dt);

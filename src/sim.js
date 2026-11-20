@@ -136,6 +136,26 @@
   }
 
   // stage：1〜7 はステージ、0（または無し）は本番（自由に焼く。ランクで評価）
+  // 今日の網：日付（日本時間）で決まる、その日だけのお題。全員が同じ日に同じお題・同じ客の並びで遊ぶ
+  const DAILY = [
+    { key: 'tan', name: jaen('タンの日', 'Tongue Day', '牛舌日'), rule: { types: ['tan'], anyRate: 0 } },
+    { key: 'harami', name: jaen('ハラミ祭り', 'Skirt Steak Fest', '横膈膜节'), rule: { types: ['harami', 'kalbi'] } },
+    { key: 'kon', name: jaen('こんがり好きの日', 'Well-Done Day', '全熟日'), rule: { targets: ['kon'] } },
+    { key: 'usu', name: jaen('うす焼き好きの日', 'Rare Day', '三分熟日'), rule: { targets: ['usu'] } },
+    { key: 'fire', name: jaen('強火の日', 'Hot Grill Day', '大火日'), rule: { fires: [1.7, 1.7, 1.0, 1.7, 1.7, 1.0] } },
+    { key: 'weak', name: jaen('炭が弱い日', 'Weak Coals Day', '炭火不旺日'), rule: { fires: [1.0, 0.5, 0.5, 1.0, 0.5, 0.5] } },
+    { key: 'rush', name: jaen('大行列', 'Huge Line', '大排长龙'), rule: { arriveGap: [1, 2.5] } },
+  ];
+  // dateKey は 20261120 のような数。お題は日付から決まり、7日続けて同じにならないよう順にずらす
+  function dailyOf(dateKey) {
+    const y = Math.floor(dateKey / 10000), m = Math.floor(dateKey / 100) % 100, d = dateKey % 100;
+    const day = Math.floor(Date.UTC(y, m - 1, d) / 864e5);
+    const week = Math.floor(day / 7), r = mulberry32(week * 2654435761 >>> 0);
+    const order = DAILY.map((x, i) => [r(), i]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    const t = DAILY[order[((day % 7) + 7) % 7]];
+    return { key: dateKey, twist: t.key, name: t.name, rule: t.rule, seed: (dateKey * 2654435761) >>> 1 };
+  }
+
   function ruleOf(stage) {
     const st = STAGES[stage - 1];
     return Object.assign({}, FULL, st ? st.rule : {});
@@ -172,11 +192,12 @@
 
   function newGame(opts) {
     opts = opts || {};
-    const seed = opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff);
-    const stage = opts.stage > 0 && opts.stage <= STAGES.length ? opts.stage : 0;
-    const R = ruleOf(stage);
+    const daily = opts.daily ? dailyOf(opts.daily) : null; // 今日の網（本番の決まり＋その日のお題）
+    const seed = daily ? daily.seed : opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff);
+    const stage = daily ? 0 : opts.stage > 0 && opts.stage <= STAGES.length ? opts.stage : 0;
+    const R = Object.assign(ruleOf(stage), daily ? daily.rule : {});
     const g = {
-      stage, R,
+      stage, R, daily,
       up: toolUp(stage ? opts.tools : null), // 道具（店のレベルで強くしたもの）。本番は道具なし＝腕だけの勝負
       shopSteps: toolUp(opts.tools).steps, // 店の格（見た目だけ。本番でも七輪の枠の色に出す）
       seed,
@@ -666,7 +687,7 @@
     return { name: jaen('見習いトング', 'Rookie Tongs'), why: jaen(g.score + '点', g.score + ' pts', g.score + ' 分') };
   }
 
-  const YG = { CFG, TYPES, STAGES, ruleOf, starsOf, starNeed, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
+  const YG = { CFG, TYPES, STAGES, DAILY, dailyOf, ruleOf, starsOf, starNeed, goodRank, LV_EXP, TOOLS, TOOL_KEYS, levelOf, toolUp, TYPE_KEYS, TRAY_KEYS, VIP_CHAR, shopRank, reserve, isActive, activeCount, TARGET_KEYS, TARGET_NAME, RANKS, CHARS, newGame, step, place, flip, moveToSlot, toPlate, discard, serve, servable, grade, label, bucket, sideClass, lessons, title, fireName, onGrillCount, mulberry32, end };
   if (typeof module !== 'undefined' && module.exports) module.exports = YG;
   else root.YG = YG;
 })(typeof window !== 'undefined' ? window : globalThis);
