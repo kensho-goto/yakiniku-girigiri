@@ -1,5 +1,5 @@
 // X・LINE に貼ったときの絵（ogp.png）を作り直す：npm start でゲームを開いてから node tools/ogp.js
-// 英語の見本だけ撮るときは SHOT_LANG=en（tools/store.js が使う）。Playwright と Chrome が要る。PLAYWRIGHT=Playwright のパス。GAME=ゲームの URL（ふだんは http://127.0.0.1:8130/）
+// 英語・中国語の見本だけ撮るときは SHOT_LANG=en・SHOT_LANG=zh（tools/store.js が使う）。Playwright と Chrome が要る。PLAYWRIGHT=Playwright のパス。GAME=ゲームの URL（ふだんは http://127.0.0.1:8130/）
 const path = require('path'), fs = require('fs');
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const GAME = process.env.GAME || 'http://127.0.0.1:8130/';
@@ -18,7 +18,7 @@ const GAME = process.env.GAME || 'http://127.0.0.1:8130/';
   await p.screenshot({ path: path.join(__dirname, 'shot.png') });
   fs.copyFileSync(path.join(__dirname, 'shot.png'), path.join(__dirname, 'shot-' + (process.env.SHOT_LANG || 'ja') + '.png'));
   await p.close();
-  if (process.env.SHOT_LANG && process.env.SHOT_LANG !== 'ja') { await b.close(); return; } // 英語の見本だけ撮るとき
+  if (process.env.SHOT_LANG && process.env.SHOT_LANG !== 'ja') { await b.close(); return; } // 英語・中国語の見本だけ撮るとき
   // 2. 絵にする
   const q = await b.newPage({ viewport: { width: 1200, height: 630 } });
   await q.goto('file://' + path.join(__dirname, 'ogp.html'));

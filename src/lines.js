@@ -2,7 +2,9 @@
 (function (root) {
   'use strict';
   const EN = !!(root.YI && root.YI.en); // 英語（i18n.js）。node では日本語
-  const CHAR_NAMES = EN ? ['Boss', 'Muscle guy', 'Granny', 'Gourmet', 'Kid', 'Cat', 'Critic'] : ['部長', 'マッチョ', 'おばあちゃん', '美食家', 'ちびっこ', 'ねこ', '審査員'];
+  const ZH = !!(root.YI && root.YI.zh); // 中国語：英語のセリフを src/zh.js の表で置きかえる
+  const t = ZH ? root.YI.t : (x) => x;
+  const CHAR_NAMES = EN || ZH ? t(['Boss', 'Muscle guy', 'Granny', 'Gourmet', 'Kid', 'Cat', 'Critic']) : ['部長', 'マッチョ', 'おばあちゃん', '美食家', 'ちびっこ', 'ねこ', '審査員'];
 
   // key → 共通のセリフ。CHAR[key][char] があればその人らしい言い方を優先する
   const BASE_JA = {
@@ -71,7 +73,7 @@
     raw: ['Does this shop serve it raw?'], halfraw: ['The underside was a fridge'], halfraw_burnt: ['Charcoal on top, fridge below. Novel'],
     burnt: ['Prime... into charcoal...'], char: ['Unratable. That is fuel'], cold: ['Cold Prime is just fat'], leave: ['This review is over'],
   };
-  const BASE = EN ? BASE_EN : BASE_JA, CHAR = EN ? CHAR_EN : CHAR_JA, VIP = EN ? VIP_EN : VIP_JA;
+  const BASE = EN ? BASE_EN : ZH ? t(BASE_EN) : BASE_JA, CHAR = EN ? CHAR_EN : ZH ? t(CHAR_EN) : CHAR_JA, VIP = EN ? VIP_EN : ZH ? t(VIP_EN) : VIP_JA;
 
   // 結果 → 反応の種類（セリフ・顔・演出・音をそろえる）
   function reactKey(r) {
@@ -95,10 +97,11 @@
     let text = char === 6 && VIP[key] ? VIP[key][0] : own && n % 2 === 0 ? own : base[n % base.length];
     // 付け足し：実際に起きたことだけ
     const extra = [];
-    if (r.carryOver) extra.push(EN ? ' Cooked on the plate.' : '（余熱で焼けすぎ）');
-    if (r.luke && key !== 'cold') extra.push(EN ? ' And lukewarm.' : '…ぬるい');
-    if (r.wrongType) extra.push(EN ? ' Wrong meat, too.' : '（頼んだ肉とちがう）');
+    if (r.carryOver) extra.push(EN || ZH ? t(' Cooked on the plate.') : '（余熱で焼けすぎ）');
+    if (r.luke && key !== 'cold') extra.push(EN || ZH ? t(' And lukewarm.') : '…ぬるい');
+    if (r.wrongType) extra.push(EN || ZH ? t(' Wrong meat, too.') : '（頼んだ肉とちがう）');
     if (EN && extra.length && !/[.!?]$/.test(text)) text += '.'; // 英語：付け足しの前で文を切る
+    if (ZH && extra.length && !/[。！？…]$/.test(text)) text += '。'; // 中国語も同じ
     return { key, face: FACE[key] || 'smile', text, extra: extra.join('') };
   }
 

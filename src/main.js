@@ -130,7 +130,7 @@
     $('levels').hidden = false;
   }
   function starHtml(n) { return '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>'; }
-  function stageLabel(k) { return k ? jaen(`ステージ${k}「${YG.STAGES[k - 1].name}」`, `Stage ${k}: ${YG.STAGES[k - 1].name}`) : jaen('本番', 'Showtime'); }
+  function stageLabel(k) { return k ? jaen(`ステージ${k}「${YG.STAGES[k - 1].name}」`, `Stage ${k}: ${YG.STAGES[k - 1].name}`, `第${k}关「${YG.STAGES[k - 1].name}」`) : jaen('本番', 'Showtime'); }
 
   // はじめて遊ぶステージは、先に「新しく覚えること」を見せる
   function begin(k) {
@@ -143,12 +143,13 @@
   }
   function showIntro(k) {
     const st = YG.STAGES[k - 1];
-    $('introNo').textContent = jaen('ステージ ', 'Stage ') + k + ' / ' + NS;
+    $('introNo').textContent = jaen('ステージ ', 'Stage ', '关卡 ') + k + ' / ' + NS;
     $('introName').textContent = st.name;
     boss('introBoss', st.intro);
     const nd = YG.starNeed(k, toolSteps()), plus = nd[2] - st.stars[2];
     $('introGoal').innerHTML = jaen(`<div class="goalbig">うまく焼いて <b>${nd[0]}</b>枚 出せ！</div>★2 <b>${nd[1]}</b>枚　★3 <b>${nd[2]}</b>枚${plus ? ` <small>道具ぶん+${plus}</small>` : ''}　${YG.ruleOf(k).duration}秒`,
-      `<div class="goalbig">Serve <b>${nd[0]}</b> done right!</div>★2 <b>${nd[1]}</b> &nbsp; ★3 <b>${nd[2]}</b>${plus ? ` <small>+${plus} for tools</small>` : ''} &nbsp; ${YG.ruleOf(k).duration} sec`);
+      `<div class="goalbig">Serve <b>${nd[0]}</b> done right!</div>★2 <b>${nd[1]}</b> &nbsp; ★3 <b>${nd[2]}</b>${plus ? ` <small>+${plus} for tools</small>` : ''} &nbsp; ${YG.ruleOf(k).duration} sec`,
+      `<div class="goalbig">烤好 <b>${nd[0]}</b> 片端上去！</div>★2 <b>${nd[1]}</b>片　★3 <b>${nd[2]}</b>片${plus ? ` <small>道具加了${plus}片</small>` : ''}　${YG.ruleOf(k).duration}秒`);
     ['title', 'stages', 'result', 'pause'].forEach((id) => { $(id).hidden = true; });
     $('intro').hidden = false;
   }
@@ -166,7 +167,7 @@
     for (let k = 1; k <= NS; k++) {
       const st = YG.STAGES[k - 1], open = unlocked(k);
       const lv = LEVELS.find((l) => l.from === k); if (lv) html += `<div class="lvhead">${lv.name}<small>${lv.sub}</small></div>`;
-      html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '?'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st"><span class="stars">${starHtml(sm[k] || 0)}</span><small class="goaln">${st.stars[0]}${jaen('枚〜', '+')}</small></span></button>`;
+      html += `<button class="srow${open ? '' : ' lock'}${k === cur ? ' cur' : ''}" data-k="${k}"${open ? '' : ' disabled'}><span class="no">${open ? k : '?'}</span><span class="tx"><b>${st.name}</b><small>${st.learn}</small></span><span class="st"><span class="stars">${starHtml(sm[k] || 0)}</span><small class="goaln">${st.stars[0]}${jaen('枚〜', '+', '片起')}</small></span></button>`;
     }
     const total = Object.values(sm).reduce((a, b) => a + b, 0);
     html += `<button class="srow free" data-k="0"><span class="no">${jaen('本番', 'GO')}</span><span class="tx"><b>${jaen('本番', 'Showtime')}</b><small>${cur ? jaen('自信があれば、とばしてここへ', 'Feeling bold? Skip straight here') : jaen('道具なし。腕だけでランク勝負', 'No tools. Rank on skill alone')}</small></span><span class="st">${store.get('yaki.best', 0) || ''}</span></button>`;
@@ -228,7 +229,8 @@
   function lvHtml(sh, gained) {
     const lo = YG.LV_EXP[sh.lv - 1], hi = sh.next;
     const pct = hi ? Math.round((sh.exp - lo) / (hi - lo) * 100) : 100;
-    return jaen(`店 <span class="lvl">Lv${sh.lv}</span>　${hi ? `あと${hi - sh.exp}枚で Lv${sh.lv + 1}` : 'これ以上ない店'}`, `Shop <span class="lvl">Lv${sh.lv}</span> &nbsp; ${hi ? `${hi - sh.exp} more to Lv${sh.lv + 1}` : 'Maxed out'}`) + `<div class="bar"><i style="width:${pct}%"></i></div>`;
+    return jaen(`店 <span class="lvl">Lv${sh.lv}</span>　${hi ? `あと${hi - sh.exp}枚で Lv${sh.lv + 1}` : 'これ以上ない店'}`, `Shop <span class="lvl">Lv${sh.lv}</span> &nbsp; ${hi ? `${hi - sh.exp} more to Lv${sh.lv + 1}` : 'Maxed out'}`,
+      `店铺 <span class="lvl">Lv${sh.lv}</span>　${hi ? `再烤好${hi - sh.exp}片升到 Lv${sh.lv + 1}` : '已经顶级了'}`) + `<div class="bar"><i style="width:${pct}%"></i></div>`;
   }
   // 結果のあと：うまく焼けた枚数を経験に足す。レベルが上がったら道具を強くできる
   function addExp(n) {
@@ -246,7 +248,7 @@
   function showTools(fromResult) {
     toolsFromResult = !!fromResult;
     const sh = shopState();
-    boss('toolBoss', sh.tickets > 0 ? [jaen(`どれを強くする？ あと<b>${sh.tickets}</b>つだ。`, `Pick one to upgrade. <b>${sh.tickets}</b> left.`)] : jaen(['うまく焼けば店が育つ。', '育ったら道具を強くしてやる。'], ['Grill it right and the shop grows.', "Then I'll upgrade your gear."]), sh.tickets > 0 ? 'grin' : 'say');
+    boss('toolBoss', sh.tickets > 0 ? [jaen(`どれを強くする？ あと<b>${sh.tickets}</b>つだ。`, `Pick one to upgrade. <b>${sh.tickets}</b> left.`, `强化哪个？还能强化<b>${sh.tickets}</b>次。`)] : jaen(['うまく焼けば店が育つ。', '育ったら道具を強くしてやる。'], ['Grill it right and the shop grows.', "Then I'll upgrade your gear."]), sh.tickets > 0 ? 'grin' : 'say');
     $('toolInfo').innerHTML = lvHtml(sh) + '<small class="lvrule">' + jaen('道具が効くのはステージだけ。本番は腕だけの勝負。<br>強い店ほど客が多く来て、★3の目標も上がる', 'Tools only work in Stages. Showtime is pure skill.<br>Better shop, more customers, tougher ★3.') + '</small>';
     $('toolList').innerHTML = YG.TOOL_KEYS.map((k) => {
       const T = YG.TOOLS[k], n = sh.tools[k] || 0, max = n >= 3;
@@ -273,7 +275,14 @@
     if ($('rTools')) $('rTools').onclick = () => showTools(true);
   }
   $('toolBtn').onclick = () => showTools(false);
-  $('langBtn').onclick = () => { if (window.YI) YI.set(YI.en ? 'ja' : 'en'); };
+  // ことばの切りかえ：タイトルの左上。押すと3つのことばが出る（いまのことばにマーカーの丸）。外を押すと閉じる
+  if (window.YI) {
+    $('langNow').textContent = YI.NAMES[YI.lang];
+    $('langList').innerHTML = YI.LANGS.map((l) => `<button class="lpick${l === YI.lang ? ' cur' : ''}" type="button" data-lang="${l}" lang="${l === 'zh' ? 'zh-CN' : l}">${YI.NAMES[l]}</button>`).join('');
+    $('langList').querySelectorAll('[data-lang]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); if (b.dataset.lang === YI.lang) $('langPick').hidden = true; else YI.set(b.dataset.lang); }; });
+  }
+  $('langBtn').onclick = () => { $('langPick').hidden = false; };
+  $('langPick').onclick = () => { $('langPick').hidden = true; };
   $('toolsClose').onclick = () => { $('tools').hidden = true; if (toolsFromResult && mode === 'result') $('result').hidden = false; else toTitle(); };
   // トング：返しどき（下が焼けて上がまだ）に肉が跳ねる。名人のトングは焦げそうなときも
   function tongHop(m, t) {
@@ -284,17 +293,18 @@
     if (!flipTime && !danger) return 0;
     return -Math.max(0, Math.sin(t * (danger ? 14 : 9))) * (danger ? 9 : 6);
   }
+  const TOKUSEN = /^(特.A5|A5\+)$/; // 保存した最高ランクが特選A5か（どのことばで遊んだときの名前でも）
   function showBest() {
     const b = store.get('yaki.best', 0);
     const br = store.get('yaki.bestRank', null);
     const k = nextStage();
     const sm = starsMap();
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
-    $('titleStage').innerHTML = k ? jaen(`つぎは <b>${YG.STAGES[k - 1].name}</b>`, `Next up: <b>${YG.STAGES[k - 1].name}</b>`) : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? jaen('つぎは <b>本番</b>', 'Next up: <b>Showtime</b>') : jaen('<b>全部クリア！</b> 本番で自己ベストを', '<b>All clear!</b> Go beat your Showtime best'));
+    $('titleStage').innerHTML = k ? jaen(`つぎは <b>${YG.STAGES[k - 1].name}</b>`, `Next up: <b>${YG.STAGES[k - 1].name}</b>`, `下一关 <b>${YG.STAGES[k - 1].name}</b>`) : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? jaen('つぎは <b>本番</b>', 'Next up: <b>Showtime</b>') : jaen('<b>全部クリア！</b> 本番で自己ベストを', '<b>All clear!</b> Go beat your Showtime best'));
     const sh = shopState();
     $('toolBtn').innerHTML = sh.tickets > 0 ? jaen('道具<span class="badge">を強くできる！</span>', 'Tools <span class="badge">upgrade!</span>') : jaen('道具', 'Tools');
-    const brName = br === '特選A5' || br === 'A5+' ? jaen('特選A5', 'A5+') : br; // 特選A5 は今のことばで
-    $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}${jaen('　', ' &nbsp; ')}` : '') + (b ? jaen(`本番の自己ベスト <b>${b}</b>`, `Showtime best <b>${b}</b>`) + (br ? jaen(`　最高ランク <b>${brName}</b>`, ` &nbsp; Top rank <b>${brName}</b>`) : '') : '');
+    const brName = TOKUSEN.test(br) ? jaen('特選A5', 'A5+') : br; // 特選A5 は今のことばで
+    $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}${jaen('　', ' &nbsp; ', '　')}` : '') + (b ? jaen(`本番の自己ベスト <b>${b}</b>`, `Showtime best <b>${b}</b>`, `正式营业最佳 <b>${b}</b>`) + (br ? jaen(`　最高ランク <b>${brName}</b>`, ` &nbsp; Top rank <b>${brName}</b>`, `　最高等级 <b>${brName}</b>`) : '') : '');
   }
   showBest();
   $('titleBoss').src = bossImg('grin');
@@ -302,7 +312,7 @@
   (function waitFont() {
     const sb = $('startBtn');
     sb.disabled = true; sb.textContent = jaen('準備中…', '...');
-    const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Potta One"', '焼肉0123') : Promise.resolve();
+    const ready = document.fonts && document.fonts.load ? document.fonts.load(YI.zh ? '20px "ZCOOL KuaiLe"' : '20px "Potta One"', jaen('焼肉0123', '焼肉0123', '烤肉滋0123')) : Promise.resolve();
     Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = jaen('焼く', 'GRILL'); if (window.YQ) YQ.loaded(); });
   })();
   $('startBtn').onclick = () => { if (fromLv() == null && !Object.keys(starsMap()).length) showLevels(); else begin(nextStage()); };
@@ -324,7 +334,7 @@
     if (window.YQ) YQ.stop();
     YS.silence();
     store.set('yaki.plays', store.get('yaki.plays', 0) + 1);
-    $('rScore').textContent = g.stage ? jaen('うまく焼けた ' + g.stats.ok + '枚', g.stats.ok + ' done right') : g.score;
+    $('rScore').textContent = g.stage ? jaen('うまく焼けた ' + g.stats.ok + '枚', g.stats.ok + ' done right', '烤好了 ' + g.stats.ok + ' 片') : g.score;
     $('rScore').style.fontSize = g.stage ? '32px' : '44px';
     $('rCost').textContent = g.stage ? '' : (g.leftoverCost || 0) + (g.wasteCost || 0) > 0 ? jaen('捨てた・残した肉代 −', 'Wasted meat −') + ((g.leftoverCost || 0) + (g.wasteCost || 0)) : '';
     $('againBtn').textContent = jaen('もう一回', 'Again'); delete $('againBtn').dataset.next;
@@ -340,7 +350,7 @@
     $('rStats').innerHTML = cells.map(([k, v, bad]) => `<div${bad ? ' class="bad"' : ''}>${k}<b>${v}</b></div>`).join('');
     const ls = YG.lessons(g).slice(0, 2);
     $('rLessons').innerHTML = '<div class="boss" id="resultBoss"></div>';
-    if (ls.length) boss('resultBoss', ls.map((l) => jaen(`${l.text}のが <b>${l.n}</b>${l.key === 'leave' ? '人' : '枚'}。${l.tip}。`, `${l.text}: <b>${l.n}</b>. ${l.tip}.`)), 'hmm');
+    if (ls.length) boss('resultBoss', ls.map((l) => jaen(`${l.text}のが <b>${l.n}</b>${l.key === 'leave' ? '人' : '枚'}。${l.tip}。`, `${l.text}: <b>${l.n}</b>. ${l.tip}.`, `${l.text}：<b>${l.n}</b>${l.key === 'leave' ? '位' : '片'}。${l.tip}。`)), 'hmm');
     else boss('resultBoss', st.served ? jaen(['失敗なし。やるじゃないか。', '次はもっと置いて、にぎやかに。'], ['Zero flops. Not bad, kid.', 'Next time, load up the grill.']) : jaen(['だれにも出してないぞ。', '焼けたら皿へ。そして客へ。'], ["You didn't feed a soul.", 'Grill it. Plate it. Serve it.']), st.served ? 'grin' : 'hmm');
     $('ptFeedback').hidden = true;
     if (window.YP) YP.end(g, g.stage ? { key: 'S' + g.stage } : YG.shopRank(g), tt);
@@ -355,14 +365,16 @@
     if (g.stage) {
       const k = g.stage, n = YG.starsOf(g);
       return jaen(`焼肉のクソゲー「ジュー」\nステージ${k}「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nうまく焼けた ${g.stats.ok}枚\n称号「${tt.name}」`,
-        `JUU, the dumbest yakiniku game\nStage ${k}: ${YG.STAGES[k - 1].name} ${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nGrilled ${g.stats.ok} right\nTitle: ${tt.name}`);
+        `JUU, the dumbest yakiniku game\nStage ${k}: ${YG.STAGES[k - 1].name} ${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nGrilled ${g.stats.ok} right\nTitle: ${tt.name}`,
+        `沙雕烤肉游戏《滋滋》\n第${k}关「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\n烤好了 ${g.stats.ok} 片\n称号「${tt.name}」`);
     }
     const rk = YG.shopRank(g);
     return jaen(`焼肉のクソゲー「ジュー」\n本番 ${rk.name}「${rk.word}」\n売上 ¥${g.score}\n称号「${tt.name}」`,
-      `JUU, the dumbest yakiniku game\nShowtime rank ${rk.name}: ${rk.word}\nSales ¥${g.score}\nTitle: ${tt.name}`);
+      `JUU, the dumbest yakiniku game\nShowtime rank ${rk.name}: ${rk.word}\nSales ¥${g.score}\nTitle: ${tt.name}`,
+      `沙雕烤肉游戏《滋滋》\n正式营业 ${rk.name}「${rk.word}」\n营业额 ¥${g.score}\n称号「${tt.name}」`);
   }
   $('rShare').onclick = () => {
-    const text = shareText + jaen('\n#ジュー焼肉', '\n#JuuYakiniku');
+    const text = shareText + jaen('\n#ジュー焼肉', '\n#JuuYakiniku', '\n#JUU烤肉');
     if (window.YC) YC.hit('share');
     if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ text, url: GAME_URL }).catch(() => {}); return; }
     open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(GAME_URL), '_blank', 'noopener');
@@ -385,11 +397,12 @@
     const opened = n >= 1 && before === 0 && k < NS;
     const nd = YG.starNeed(k, g.up.steps), need = nd[n];
     $('rNext').innerHTML = jaen(opened ? `ステージ${k + 1}「${YG.STAGES[k].name}」が開いた！` : n === 0 ? `目標まで あと <b>${need - got}</b>枚（目標 ${nd[0]}枚）` : n < 3 ? `★${n + 1}まで あと <b>${need - got}</b>枚` : '★3 達成！',
-      opened ? `Stage ${k + 1}: ${YG.STAGES[k].name} unlocked!` : n === 0 ? `<b>${need - got}</b> short. The goal is ${nd[0]}` : n < 3 ? `<b>${need - got}</b> more for ★${n + 1}` : '★3. Respect.');
+      opened ? `Stage ${k + 1}: ${YG.STAGES[k].name} unlocked!` : n === 0 ? `<b>${need - got}</b> short. The goal is ${nd[0]}` : n < 3 ? `<b>${need - got}</b> more for ★${n + 1}` : '★3. Respect.',
+      opened ? `第${k + 1}关「${YG.STAGES[k].name}」解锁了！` : n === 0 ? `离目标还差 <b>${need - got}</b> 片　目标 ${nd[0]} 片` : n < 3 ? `离★${n + 1}还差 <b>${need - got}</b> 片` : '★3 拿下！');
     if (n >= 1 && before === 0 && k === NS) $('rNext').innerHTML = jaen('全ステージ クリア！ 本番が待っている', 'Every stage cleared! Showtime awaits');
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(n * 1.5); } }, 350);
     $('rNew').innerHTML = n > before && before > 0 ? `<span class="new">${jaen('★更新！', 'New ★!')}</span>` : got > bestBefore && bestBefore > 0 ? `<span class="new">${jaen('ステージの自己ベスト！', 'Stage best!')}</span>` : '';
-    $('rBest').innerHTML = bestBefore > 0 ? jaen(`このステージの自己ベスト <b>${Math.max(bestBefore, got)}</b>枚`, `Stage best <b>${Math.max(bestBefore, got)}</b>`) : '';
+    $('rBest').innerHTML = bestBefore > 0 ? jaen(`このステージの自己ベスト <b>${Math.max(bestBefore, got)}</b>枚`, `Stage best <b>${Math.max(bestBefore, got)}</b>`, `本关最佳 <b>${Math.max(bestBefore, got)}</b> 片`) : '';
     // 次へ進めるなら、大きいボタンは「次のステージへ」
     if (n >= 1) {
       const nk = k < NS ? k + 1 : 0;
@@ -407,17 +420,18 @@
     const order = ['kikaku', 'C', 'B', 'A3', 'A4', 'A5', 'tokusen'];
     const bestRank = store.get('yaki.bestRank', null);
     const rkName = rk.key === 'kikaku' ? null : rk.name;
-    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(bestRank === '特選A5' || bestRank === 'A5+' ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
+    if (rkName && (!bestRank || order.indexOf(rk.key === 'tokusen' ? 'tokusen' : rk.key) > order.indexOf(TOKUSEN.test(bestRank) ? 'tokusen' : bestRank))) store.set('yaki.bestRank', rkName);
     const stamp = $('rRank');
     stamp.className = 'rank r-' + rk.key;
-    stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? jaen('（売上だけなら ' + rk.byScore + '）', 'Sales alone: ' + rk.byScore) : rk.word}</span>`;
+    stamp.innerHTML = `<span class="rk">${rk.name}</span><span class="rw">${rk.key === 'kikaku' ? jaen('（売上だけなら ' + rk.byScore + '）', 'Sales alone: ' + rk.byScore, '光看营业额是 ' + rk.byScore) : rk.word}</span>`;
     stamp.classList.remove('go'); void stamp.offsetWidth; stamp.classList.add('go');
     const nx = rk.key !== 'tokusen' && rk.next;
     $('rNext').innerHTML = jaen(rk.key === 'kikaku' ? '焦がしすぎて格付けできません' : nx ? `${nx.key}まで あと <b>${nx.need}</b>点` : rk.key === 'A5' ? '失敗なし＋神焼き5枚で <b>特選A5</b>' : '最高ランク！',
-      rk.key === 'kikaku' ? 'Too burnt to grade' : nx ? `<b>${nx.need}</b> more for ${nx.key}` : rk.key === 'A5' ? 'Zero flops and 5 Godly for <b>A5+</b>' : 'Top rank!');
+      rk.key === 'kikaku' ? 'Too burnt to grade' : nx ? `<b>${nx.need}</b> more for ${nx.key}` : rk.key === 'A5' ? 'Zero flops and 5 Godly for <b>A5+</b>' : 'Top rank!',
+      rk.key === 'kikaku' ? '烤焦太多，没法评级' : nx ? `离${nx.key}还差 <b>${nx.need}</b> 分` : rk.key === 'A5' ? '零失手＋神级5片，就是 <b>特选A5</b>' : '最高等级！');
     setTimeout(() => { if (mode === 'result') { YS.stamp(); YS.applause(Math.max(0, rk.index)); } }, 350);
     $('rNew').innerHTML = isNew && g.score > 0 ? `<span class="new">${jaen('自己ベスト更新！', 'New best!')}</span>` : '';
-    $('rBest').innerHTML = best > 0 ? jaen(`本番の自己ベスト <b>${Math.max(best, g.score)}</b>`, `Showtime best <b>${Math.max(best, g.score)}</b>`) : jaen('はじめての本番の記録', 'Your first Showtime score');
+    $('rBest').innerHTML = best > 0 ? jaen(`本番の自己ベスト <b>${Math.max(best, g.score)}</b>`, `Showtime best <b>${Math.max(best, g.score)}</b>`, `正式营业最佳 <b>${Math.max(best, g.score)}</b>`) : jaen('はじめての本番の記録', 'Your first Showtime score');
   }
 
   // ===== 当たり判定 =====
@@ -577,7 +591,7 @@
       else if (ev.type === 'reserveLost') { YS.deny(); float(L.plateX[ev.plate], L.plateY - 50, jaen('出す予定の客が帰った', 'They walked out'), '#ff9a8a', 12); }
       else if (ev.type === 'rested') { YS.rested(); burst(L.plateX[ev.plate], L.plateY, 6, '#ffd84d', 80, 60); }
       else if (ev.type === 'burning') { YS.burning(); }
-      else if (ev.type === 'fever') { YS.fever(); YS.buzz([30, 30, 30]); banner(jaen('フィーバー！', 'FEVER!'), jaen('10秒間 点数×', 'Points ×') + YG.CFG.feverMult + jaen('', ' for 10 sec'), '#ffd84d'); burst(200, 460, 50, '#ffd84d', 400, 300); }
+      else if (ev.type === 'fever') { YS.fever(); YS.buzz([30, 30, 30]); banner(jaen('フィーバー！', 'FEVER!'), jaen('10秒間 点数×', 'Points ×', '10秒内 分数×') + YG.CFG.feverMult + jaen('', ' for 10 sec', ''), '#ffd84d'); burst(200, 460, 50, '#ffd84d', 400, 300); }
       else if (ev.type === 'feverMore') { YS.fever(); banner(jaen('フィーバー延長！', 'MORE FEVER!'), '+' + YG.CFG.feverTime + jaen('秒', ' sec'), '#ffd84d', 1.2); }
       else if (ev.type === 'feverEnd') { YS.feverEnd(); if (ev.broken) banner(jaen('フィーバー終了…', 'Fever over...'), jaen('失敗でメーターが0に', 'A flop killed the meter'), '#ff9a8a', 1.2); }
       else if (ev.type === 'vip') { YS.vip(); banner(jaen('審査員が来た！', 'THE CRITIC IS HERE!'), jaen('特上カルビで 点数×', 'Prime Kalbi: points ×') + YG.CFG.vipMult, '#ffd84d', 2); }
@@ -595,7 +609,7 @@
         react[ev.seat] = info;
         const x = L.seatX[ev.seat];
         const good = r.rank === 'perfect' || r.rank === 'great';
-        if (g.stage) { if (YG.goodRank(r)) float(x, L.counterY + 22, jaen('+1枚', '+1'), '#ffd84d', 20, 1.3); } // ステージは枚数で数える
+        if (g.stage) { if (YG.goodRank(r)) float(x, L.counterY + 22, jaen('+1枚', '+1', '+1片'), '#ffd84d', 20, 1.3); } // ステージは枚数で数える
         else if (e.pts) float(x, L.counterY + 22, '+' + e.pts, '#ffd84d', 20, 1.3); // 点はカウンターの上（顔に重ねない）
         if (e.combo >= 2 && good) comboPop = 1;
         if (r.fail) YS.buzz([60, 40, 60]); else if (r.rank === 'perfect') YS.buzz(25);
@@ -648,7 +662,7 @@
       acc += dt;
       while (acc >= STEP) { YG.step(g, STEP); acc -= STEP; }
       handleEvents();
-      if (prevState === 'ready' && g.state === 'play') banner(jaen('スタート！', 'GO!'), g.stage ? jaen(g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！', 'Nail ' + YG.STAGES[g.stage - 1].stars[0] + ' in ' + g.R.duration + ' sec!') : jaen('道具なし・腕だけで ' + g.R.duration + '秒', 'No tools. Just skill. ' + g.R.duration + ' sec'), '#ffd84d', 1.4);
+      if (prevState === 'ready' && g.state === 'play') banner(jaen('スタート！', 'GO!'), g.stage ? jaen(g.R.duration + '秒で うまく焼いて ' + YG.STAGES[g.stage - 1].stars[0] + '枚！', 'Nail ' + YG.STAGES[g.stage - 1].stars[0] + ' in ' + g.R.duration + ' sec!', g.R.duration + '秒内烤好 ' + YG.STAGES[g.stage - 1].stars[0] + ' 片！') : jaen('道具なし・腕だけで ' + g.R.duration + '秒', 'No tools. Just skill. ' + g.R.duration + ' sec', '不用道具，全凭手艺 ' + g.R.duration + '秒'), '#ffd84d', 1.4);
       if (g.state === 'play' && g.timeLeft <= 10 && !warned10) { warned10 = true; banner(jaen('のこり10秒！', '10 SEC LEFT!'), '', '#ff5a3a', 1.2); }
       prevState = g.state;
       checkTips(dt);
@@ -684,18 +698,17 @@
   }
 
   // タイトルのロゴが、ちょうちん（論理座標 x=30・370、y=36〜102）にかぶるか。0.5秒ごとに測る
+  // ロゴがかぶる → 両方描かない（true）。左上のことばの切りかえだけがかぶる → 左だけ描かない（'left'）
   let lanternMemo = { at: -1, hit: false };
   function logoHitsLantern() {
     if (clock - lanternMemo.at < 0.5 && lanternMemo.at >= 0) return lanternMemo.hit;
-    const el = document.querySelector('#title .logo');
-    const r = el && !document.getElementById('title').hidden ? el.getBoundingClientRect() : null;
+    const onTitle = !document.getElementById('title').hidden;
+    const rectOf = (sel) => { const el = onTitle && document.querySelector(sel); const r = el && el.getBoundingClientRect(); return r && r.width ? r : null; };
+    const over = (r, x) => { const lx0 = ox + (x - 16) * scale, lx1 = ox + (x + 16) * scale, ly0 = oy + 30 * scale, ly1 = oy + 104 * scale; return r.left < lx1 && r.right > lx0 && r.top < ly1 && r.bottom > ly0; };
+    const logo = rectOf('#title .logo'), lb = rectOf('#langBtn');
     let hit = false;
-    if (r && r.width) {
-      for (const x of [30, 370]) {
-        const lx0 = ox + (x - 16) * scale, lx1 = ox + (x + 16) * scale, ly0 = oy + 30 * scale, ly1 = oy + 104 * scale;
-        if (r.left < lx1 && r.right > lx0 && r.top < ly1 && r.bottom > ly0) hit = true;
-      }
-    }
+    if (logo && (over(logo, 30) || over(logo, 370))) hit = true;
+    else if (lb && over(lb, 30)) hit = 'left';
     lanternMemo = { at: clock, hit };
     return hit;
   }
@@ -773,7 +786,7 @@
       const a = Math.min(1, (1 - f.t / f.life) * 2.5);
       const pop = Math.min(1, f.t * 8);
       ctx.save(); ctx.globalAlpha = a; ctx.translate(f.x, f.y - f.t * 26); ctx.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop);
-      ctx.font = `${f.size}px "Potta One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
+      ctx.font = YD.zf(`${f.size}px "Potta One", "Hiragino Sans", sans-serif`); ctx.textAlign = 'center';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(40,10,0,0.9)'; ctx.strokeText(f.text, 0, 0);
       ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
       ctx.restore();
@@ -807,7 +820,7 @@
   }
   function hitSeat(p, i) { return p && p.y < L.counterY + 8 && Math.abs(p.x - L.seatX[i]) < 66; }
   function bigText(text, x, y, size, color) {
-    ctx.font = `${size}px "Potta One", "Hiragino Sans", sans-serif`; ctx.textAlign = 'center';
+    ctx.font = YD.zf(`${size}px "Potta One", "Hiragino Sans", sans-serif`); ctx.textAlign = 'center';
     ctx.lineWidth = 8; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(text, x, y);
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   }
@@ -849,7 +862,7 @@
     }
     if (rankPop > 0) { // ランクアップの知らせ
       ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
-      ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.font = YD.zf('14px "Potta One", "Hiragino Sans", sans-serif'); ctx.textAlign = 'center';
       ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(jaen('ランクUP!', 'RANK UP!'), 262, 66 - (1 - rankPop) * 8);
       ctx.fillStyle = '#ffd84d'; ctx.fillText(jaen('ランクUP!', 'RANK UP!'), 262, 66 - (1 - rankPop) * 8);
       ctx.restore();
@@ -867,7 +880,7 @@
       void lo; void hi;
       if (rankPop > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
-        ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
+        ctx.font = YD.zf('14px "Potta One", "Hiragino Sans", sans-serif'); ctx.textAlign = 'center';
         const tx = n >= 3 ? '★3!' : '★' + n + '!';
         ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00'; ctx.strokeText(tx, 262, 66 - (1 - rankPop) * 8);
         ctx.fillStyle = '#ffd84d'; ctx.fillText(tx, 262, 66 - (1 - rankPop) * 8);
@@ -900,7 +913,7 @@
       const n = YG.starsOf(g), goal = YG.starNeed(g.stage, g.up.steps)[Math.min(2, n)];
       const tx = g.stats.ok + '/' + goal;
       YD.say(ctx, tx, 12, 34, 22, n ? '#ffd84d' : '#fff', { big: true, align: 'left', lw: 6 });
-      const w = ctx.measureText(tx).width; YD.say(ctx, jaen('枚', ''), 15 + w, 34, 13, '#ffe9cf', { align: 'left', lw: 4 });
+      const w = ctx.measureText(tx).width; YD.say(ctx, jaen('枚', '', '片'), 15 + w, 34, 13, '#ffe9cf', { align: 'left', lw: 4 });
       lx = Math.max(80, 12 + w + 32);
     } else {
     YD.say(ctx, '¥', 12, 34, 15, '#ffd84d', { big: true, align: 'left', lw: 5 });
@@ -925,7 +938,7 @@
     else {
       ctx.beginPath(); ctx.arc(316, 22, 7, -0.8, 0.8); ctx.stroke();
       if (YS.level === 0) { ctx.beginPath(); ctx.arc(316, 22, 12, -0.8, 0.8); ctx.stroke(); }
-      else { ctx.font = '10px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
+      else { ctx.font = YD.zf('10px "Yusei Magic", "Hiragino Sans", sans-serif'); ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
     }
     if (g.state === 'ready') {
       const gy = L.grill.y + L.grill.h / 2, bob = Math.sin(t * 4) * 3;
@@ -948,7 +961,7 @@
       const tx = L.trayX[YG.TRAY_KEYS.indexOf(ty)];
       const free = [1, 0, 2, 4, 3, 5].find((i) => !g.grill[i]);
       if (free != null && !(ptr && ptr.drag)) { const s = L.slot(free); guide(tx, L.trayY - 6, s.x, s.y, t, YD.trayMeat(ty)); }
-      x = tx; y = L.trayY - 74; text = '① ' + jaen(YG.TYPES[ty].name + 'を網へドラッグ', 'Drag ' + YG.TYPES[ty].name + ' onto the grill');
+      x = tx; y = L.trayY - 74; text = '① ' + jaen(YG.TYPES[ty].name + 'を網へドラッグ', 'Drag ' + YG.TYPES[ty].name + ' onto the grill', '把' + YG.TYPES[ty].name + '拖到烤网上');
     } else if (tut === 1) {
       const id = g.grill.find((v) => v); if (!id) return;
       const m = g.meats[id]; const s = L.slot(g.grill.indexOf(id));
@@ -1035,7 +1048,7 @@
   }
   // 黄色い案内の吹き出し（dir：1＝下を指す、-1＝上を指す）
   function bubble(x, y, text, dir, t) {
-    ctx.font = '15px "Yusei Magic", "Hiragino Sans", sans-serif';
+    ctx.font = YD.zf('15px "Yusei Magic", "Hiragino Sans", sans-serif');
     const w = ctx.measureText(text).width + 24;
     const bx = Math.max(8, Math.min(W - 8 - w, x - w / 2));
     const bob = Math.sin(t * 5) * 3;

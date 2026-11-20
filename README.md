@@ -213,13 +213,13 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 ## 見た目の決まり（AI っぽさを出さない）
 
 - 文字を四角い箱に入れない。ふちの太い手書きの字を、店の絵の上にじかに置く（Penguin Diner・にゃんこ大戦争の見せ方）。
-- 字は2つだけ：ふだんは Yusei Magic、叫ぶ字・数字は Potta One。どちらも `fonts/` に、使う字だけ入れてある（OFL）。文言を変えて新しい漢字を使ったら `python tools/fonts.py` で作り直す（中に手順あり）。
+- 字は2つだけ：ふだんは Yusei Magic、叫ぶ字・数字は Potta One。中国語のときだけ、どちらも ZCOOL KuaiLe（站酷快乐体）。どれも `fonts/` に、使う字だけ入れてある（OFL）。文言を変えて新しい漢字を使ったら `python tools/fonts.py` で作り直す（中に手順あり）。
 - 説明は店長が話す。絵文字・カッコの補足・％の数字は使わない。
 - アイコンは `tools/icon.html` が元。`node tools/icon.js` で `icon-*.png` を作り直す。
 
 ## 公開・ことば・ゲームサイト
 - 公開版：https://kensho-goto.github.io/yakiniku-girigiri/ （main に入れると `.github/workflows/pages.yml` が更新する。ページが読むファイルが欠けていたら止まる）
-- ことば：日本語の端末は日本語、ほかは英語（`src/i18n.js`。`?lang=ja|en`、タイトルの English / 日本語 で切りかえ）
+- ことば：日本語の端末は日本語、中国語の端末（台湾・香港も）は中国語＝簡体字、ほかは英語（`src/i18n.js`。`?lang=ja|en|zh`、タイトルの左上の地球の印を押すと、3つのことばから選べる）。中国語は英語の文を `src/zh.js` の表で置きかえる。中国語の名前は「滋滋」
 - 遊んだ数：GoatCounter（`src/count.js`。公開版だけ・クッキーなし）。説明は `about.html`
 - 電波なし：`sw.js`（いつもは新しいものを取りに行き、つながらないときだけとっておいたものを出す）
 - 貼ったときの絵：`node tools/ogp.js` で `ogp.png` を作り直す
