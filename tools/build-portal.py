@@ -37,9 +37,9 @@ def build(name, crazy):
     for js in DROP_JS:
         drop(r'<script src="src/' + re.escape(js) + r'[^"]*"></script>\s*')
     if crazy:
-        if 'id="rShare">' not in s:
+        if 'id="rShare"' not in s:
             raise SystemExit('自慢するボタンが見つからない')
-        s = s.replace('id="rShare">', 'id="rShare" hidden>')  # 消すと main.js が困るので、隠すだけ
+        s = s.replace('id="rShare"', 'id="rShare" hidden')  # 消すと main.js が困るので、隠すだけ
         drop(r'<a class="tiny about"[^>]*>[^<]*</a>\s*')
         first = s.index('<script src="src/')
         s = s[:first] + SDK + '\n<script src="src/portal.js?v=dev"></script>\n' + s[first:]

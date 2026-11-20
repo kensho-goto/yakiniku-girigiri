@@ -216,3 +216,11 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 - 字は2つだけ：ふだんは Yusei Magic、叫ぶ字・数字は Potta One。どちらも `fonts/` に、使う字だけ入れてある（OFL）。文言を変えて新しい漢字を使ったら `python tools/fonts.py` で作り直す（中に手順あり）。
 - 説明は店長が話す。絵文字・カッコの補足・％の数字は使わない。
 - アイコンは `tools/icon.html` が元。`node tools/icon.js` で `icon-*.png` を作り直す。
+
+## 公開・ことば・ゲームサイト
+- 公開版：https://kensho-goto.github.io/yakiniku-girigiri/ （main に入れると `.github/workflows/pages.yml` が更新する。ページが読むファイルが欠けていたら止まる）
+- ことば：日本語の端末は日本語、ほかは英語（`src/i18n.js`。`?lang=ja|en`、タイトルの English / 日本語 で切りかえ）
+- 遊んだ数：GoatCounter（`src/count.js`。公開版だけ・クッキーなし）。説明は `about.html`
+- 電波なし：`sw.js`（いつもは新しいものを取りに行き、つながらないときだけとっておいたものを出す）
+- 貼ったときの絵：`node tools/ogp.js` で `ogp.png` を作り直す
+- ゲームサイト：`python3 tools/build-portal.py` → `dist/ju-web.zip`（itch.io・ふりーむ!）・`dist/ju-crazygames.zip`。載せる文と絵は `docs/store.md`・`docs/store/`

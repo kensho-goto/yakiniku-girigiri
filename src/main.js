@@ -194,20 +194,23 @@
     ['title', 'pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
+    if (window.YQ) YQ.start();
     if (window.YC) YC.hit(stage ? 'start-s' + stage : 'start-honban');
   }
   function pause(on) {
     if (!g || mode !== 'play' || g.state === 'over') return;
     held = null; ptr = null;
     last = null; // もどったときに、離れていた時間をまとめて足さない
-    if (on) { g.paused = true; resumeT = 0; $('pause').hidden = false; YS.silence(); return; }
+    if (on) { g.paused = true; resumeT = 0; $('pause').hidden = false; YS.silence(); if (window.YQ) YQ.stop(); return; }
     if (!g.paused) return;
+    if (window.YQ) YQ.start();
     $('pause').hidden = true;
     // すぐには動かさない：3・2・1 のあとで再開（遊ぶ前の「ready」なら待たない）
     if (g.state === 'ready') g.paused = false; else resumeT = 1.5;
   }
   function toTitle() {
     if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
+    if (window.YQ) YQ.stop();
     mode = 'title'; g = null;
     ['pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
@@ -300,13 +303,15 @@
     const sb = $('startBtn');
     sb.disabled = true; sb.textContent = jaen('準備中…', '...');
     const ready = document.fonts && document.fonts.load ? document.fonts.load('20px "Potta One"', '焼肉0123') : Promise.resolve();
-    Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = jaen('焼く', 'GRILL'); });
+    Promise.race([ready.catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() => { sb.disabled = false; sb.textContent = jaen('焼く', 'GRILL'); if (window.YQ) YQ.loaded(); });
   })();
   $('startBtn').onclick = () => { if (fromLv() == null && !Object.keys(starsMap()).length) showLevels(); else begin(nextStage()); };
   $('levelsClose').onclick = () => { $('levels').hidden = true; toTitle(); };
   $('lvBtn').onclick = showLevels;
-  $('againBtn').onclick = () => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); };
-  $('rRetry').onclick = () => newRun(stage);
+  // ゲームサイト版：結果からもう一度遊ぶときに、区切りの広告をはさむ（出すかどうかはサイトが決める）
+  const afterAd = (fn) => (window.YQ ? YQ.breakAd(fn) : fn());
+  $('againBtn').onclick = () => afterAd(() => { const a = $('againBtn').dataset.next; if (a) begin(Number(a)); else newRun(stage); });
+  $('rRetry').onclick = () => afterAd(() => newRun(stage));
   $('resumeBtn').onclick = () => pause(false);
   $('retryBtn').onclick = () => newRun(stage);
   $('toTitleBtn').onclick = toTitle;
@@ -316,6 +321,7 @@
 
   function showResult() {
     mode = 'result';
+    if (window.YQ) YQ.stop();
     YS.silence();
     store.set('yaki.plays', store.get('yaki.plays', 0) + 1);
     $('rScore').textContent = g.stage ? jaen('うまく焼けた ' + g.stats.ok + '枚', g.stats.ok + ' done right') : g.score;
@@ -367,7 +373,7 @@
     const n = YG.starsOf(g);
     const sm = starsMap();
     const before = sm[k] || 0;
-    if (n > before) { sm[k] = n; store.set('yaki.stars', sm); }
+    if (n > before) { sm[k] = n; store.set('yaki.stars', sm); if (window.YQ) YQ.happy(); }
     const sb = store.get('yaki.stageBestN', {}) || {};
     const bestBefore = sb[k] || 0;
     const got = g.stats.ok;
