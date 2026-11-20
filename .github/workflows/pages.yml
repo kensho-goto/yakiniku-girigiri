@@ -27,9 +27,12 @@ jobs:
       - name: ゲームのファイルだけを集める
         run: |
           mkdir _site
-          cp -r index.html robots.txt manifest.json icon-180.png icon-192.png icon-512.png src play _site/
+          cp -r index.html about.html sw.js ogp.png robots.txt manifest.json icon-180.png icon-192.png icon-512.png src play fonts _site/
           V=${GITHUB_SHA::7}
           sed -i "s/?v=dev/?v=$V/g" _site/index.html
+          sed -i "s/?v=dev/?v=$V/g; s/'ju-v1'/'ju-$V'/" _site/sw.js
+          # 載せ忘れを見つける：ページが読むファイルがすべてあるか
+          for f in $(grep -oE '(src|fonts)/[A-Za-z0-9_-]+[.](js|woff2)' _site/index.html _site/sw.js | cut -d: -f2 | sort -u) ogp.png about.html sw.js; do test -f "_site/$f" || { echo "ない: $f"; exit 1; }; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
