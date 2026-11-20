@@ -294,6 +294,11 @@
   .pt textarea::placeholder { color: rgba(255,226,191,.6); text-shadow: none; }
   .pt-thanks { text-shadow: var(--o2); }
   #rotate { text-shadow: var(--o2); font-weight: 400; }
+  /* 自慢する絵：撮った写真のように少し傾けて置く */
+  #cardView .card { text-align: center; }
+  .cardimg { display: block; width: min(80vw, 46vh, 420px); margin: 0 auto; border: 6px solid #2a1206; transform: rotate(-2deg); box-shadow: 0 14px 30px rgba(0,0,0,.6); }
+  .cardhint { margin-top: 14px; font-size: 17px; color: #ffd9b0; }
+  a#cardSave { display: inline-block; text-decoration: none; margin-top: 6px; }
   #rotate .ph { border-color: #ffd84d; border-radius: 10px 12px 9px 13px; box-shadow: 0 0 0 3px var(--ink); }
   /* 英語：ロゴの「YAKINIKU」は字の間を詰める。ことばの切りかえは小さめ */
   html[lang=en] #title .logo small { letter-spacing: .12em; }
@@ -412,6 +417,15 @@
   </div>
 </div>
 
+<div class="overlay dim" id="cardView" hidden>
+  <div class="card">
+    <img id="cardImg" class="cardimg" alt="">
+    <div class="cardhint" data-en="Save it, then post it" data-zh="保存后发给朋友吧">保存して、Xや LINE に貼ろう</div>
+    <a class="btn" id="cardSave" download="ju-yakiniku.png" data-en="Save image" data-zh="保存图片">画像を保存</a>
+    <div><button class="btn2" id="cardX" data-en="Post on X" data-zh="发到 X">Xに書く</button><button class="btn2" id="cardClose" data-en="Back" data-zh="返回">もどる</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="rotate" hidden>
   <div class="ph"></div>
   <span data-en="Turn your phone upright">スマホを縦にしてね</span>
@@ -422,6 +436,7 @@
 <script src="src/sim.js?v=dev"></script>
 <script src="src/lines.js?v=dev"></script>
 <script src="src/draw.js?v=dev"></script>
+<script src="src/card.js?v=dev"></script>
 <script src="src/sound.js?v=dev"></script>
 <script src="src/playtest.js?v=dev"></script>
 <script src="src/main.js?v=dev"></script>

@@ -193,7 +193,7 @@
     banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {}; prevState = null; warned10 = false;
     acc = 0; last = null;
     mode = 'play';
-    ['title', 'pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
+    ['title', 'pause', 'result', 'stages', 'intro', 'levels', 'tools', 'cardView'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
     if (window.YQ) YQ.start();
@@ -214,7 +214,7 @@
     if (g && mode === 'play' && window.YP) YP.quit(g, 'title');
     if (window.YQ) YQ.stop();
     mode = 'title'; g = null;
-    ['pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
+    ['pause', 'result', 'stages', 'intro', 'levels', 'tools', 'cardView'].forEach((id) => { $(id).hidden = true; });
     $('title').hidden = false;
     YS.silence();
     showBest();
@@ -356,6 +356,10 @@
     $('ptFeedback').hidden = true;
     if (window.YP) YP.end(g, g.stage ? { key: 'S' + g.stage } : YG.shopRank(g), tt);
     shareText = brag(tt);
+    // 自慢する絵：先に作っておく（押したときにすぐ共有の画面を出すため）
+    if (card && card.url) URL.revokeObjectURL(card.url);
+    card = null;
+    if (window.YK) { const mine = g; YK.make(g).then((c) => { if (g === mine) card = c; }).catch(() => {}); }
     if (window.YC) YC.hit(g.stage ? `end-s${g.stage}-star${YG.starsOf(g)}` : 'end-honban-' + YG.shopRank(g).key);
     $('result').hidden = false;
   }
@@ -374,12 +378,29 @@
       `JUU, the dumbest yakiniku game\nShowtime rank ${rk.name}: ${rk.word}\nSales ¥${g.score}\nTitle: ${tt.name}`,
       `沙雕烤肉游戏《滋滋》\n正式营业 ${rk.name}「${rk.word}」\n营业额 ¥${g.score}\n称号「${tt.name}」`);
   }
+  let card = null; // { blob, file, url } 今回の結果の絵
+  const xPost = (text) => open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(GAME_URL), '_blank', 'noopener');
   $('rShare').onclick = () => {
     const text = shareText + jaen('\n#ジュー焼肉', '\n#JuuYakiniku', '\n#JUU烤肉');
     if (window.YC) YC.hit('share');
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ text, url: GAME_URL }).catch(() => {}); return; }
-    open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(GAME_URL), '_blank', 'noopener');
+    const phone = matchMedia('(pointer: coarse)').matches;
+    // スマホ：絵ごと共有の画面へ（LINE・X・写真に保存を選べる）
+    if (phone && card && card.file && navigator.canShare && navigator.canShare({ files: [card.file] })) {
+      navigator.share({ files: [card.file], text: text + '\n' + GAME_URL }).catch((err) => { if (!err || err.name !== 'AbortError') showCard(text); });
+      return;
+    }
+    if (card) { showCard(text); return; }
+    // 絵がまだできていない：文だけ
+    if (navigator.share && phone) { navigator.share({ text, url: GAME_URL }).catch(() => {}); return; }
+    xPost(text);
   };
+  // パソコンなど：絵を見せて、保存してから X に貼ってもらう
+  function showCard(text) {
+    $('cardImg').src = card.url; $('cardSave').href = card.url;
+    $('cardX').onclick = () => xPost(text);
+    $('result').hidden = true; $('cardView').hidden = false;
+  }
+  $('cardClose').onclick = () => { $('cardView').hidden = true; $('result').hidden = false; };
   // ステージの結果：★と、次のステージが開いたか
   function showStageResult() {
     const k = g.stage, st = YG.STAGES[k - 1];
