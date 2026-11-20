@@ -110,7 +110,7 @@
   }
 
   // サーバーがいるときだけ動く
-  fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
+  if (!/github\.io$/.test(location.hostname)) fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
     if (!j || !j.playtest) return;
     on = true;
     setupName();
