@@ -39,9 +39,10 @@
     const cw = window.innerWidth, ch = window.innerHeight;
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
     scale = Math.min(cw / W, ch / H);
-    // 縦に余るときは上に寄せる（上の欄を画面の上に付ける）。iPhone の切り欠きの分だけは下げる
+    // 縦に余るときは、4割を上（梁と天井が伸びる）・6割を下に回す。下の暗い空きを減らし、トレーも指に近くなる
     const safeTop = (document.getElementById('safe') || {}).offsetHeight || 0;
-    ox = (cw - W * scale) / 2; oy = Math.max(0, Math.min(ch - H * scale, safeTop));
+    const free = Math.max(0, ch - H * scale);
+    ox = (cw - W * scale) / 2; oy = Math.min(free, Math.max(safeTop, free * 0.4));
     ext = { x0: -ox / scale, x1: (cw - ox) / scale, y0: -oy / scale, y1: (ch - oy) / scale };
     const tf = document.getElementById('titleFrame');
     if (tf) tf.style.transform = `translate(${ox}px, ${oy}px) scale(${scale})`;
@@ -283,12 +284,13 @@
     const k = nextStage();
     const sm = starsMap();
     const total = Object.values(sm).reduce((a, c) => a + c, 0);
-    $('titleStage').innerHTML = k ? `つぎは <b>${stageLabel(k)}</b>` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? '<b>上級者：本番から</b><br>ランクで勝負。自己ベストをねらう' : '<b>全ステージ クリア！</b><br>本番で自己ベストをねらう');
+    $('titleStage').innerHTML = k ? `つぎは <b>${YG.STAGES[k - 1].name}</b>` : (fromLv() === 0 && !(starsMap()[NS] >= 1) ? 'つぎは <b>本番</b>' : '<b>全部クリア！</b> 本番で自己ベストを');
     const sh = shopState();
-    $('toolBtn').innerHTML = `道具 Lv${sh.lv}` + (sh.tickets > 0 ? `<span class="badge">+${sh.tickets}</span>` : '');
+    $('toolBtn').innerHTML = sh.tickets > 0 ? '道具<span class="badge">を強くできる！</span>' : '道具';
     $('titleBest').innerHTML = (total ? `★ <b>${total}</b>/${NS * 3}　` : '') + (b ? `本番の自己ベスト <b>${b}</b>` + (br ? `　最高ランク <b>${br}</b>` : '') : '');
   }
   showBest();
+  $('titleBoss').src = bossImg('grin');
   // 文字の形（Potta One・Yusei Magic）が届くまで「焼く」を待たせる（届かなくても 2.5 秒で始められる）
   (function waitFont() {
     const sb = $('startBtn');
@@ -580,7 +582,7 @@
   function showTip(key, x, y, text) { if (tipsDone[key]) return; tipsDone[key] = 1; tip = { x, y, text, t: 0 }; }
   function checkTips(dt) {
     if (tip) { tip.t += dt; if (tip.t > 3.2) tip = null; }
-    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 44, j.y + 102, '×をタップで すてる'); }
+    if (g.state === 'play' && !store.get('yaki.didDiscard', 0)) { const j = junkBadges()[0]; if (j) showTip('junk', j.x - 30, j.y + 36, '×をタップで すてる'); }
     if (!g.stage || tut < 4 || g.state !== 'play' || (starsMap()[g.stage] || 0) >= 1) return;
     const k = g.stage;
     for (let i = 0; i < 6; i++) {
@@ -778,7 +780,16 @@
   function scoreRank(score) { let i = 0; YG.CFG.ranks.forEach((r, k) => { if (score >= r.min) i = k; }); return i; }
   const RANK_COLOR = { C: ['#6b6b6b', '#fff'], B: ['#b0703a', '#fff'], A3: ['#c9ced6', '#2a2a2a'], A4: ['#ffd84d', '#3a1a00'], A5: ['#ff5a8a', '#fff'] };
   function renderHud(t) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(ext.x0, ext.y0, ext.x1 - ext.x0, 44 - ext.y0);
+    { // 上の帯は店の梁（はり）：木の板と木目
+      const bx0 = ext.x0, bw = ext.x1 - ext.x0;
+      const wg = ctx.createLinearGradient(0, ext.y0, 0, 44);
+      wg.addColorStop(0, '#2c190d'); wg.addColorStop(0.55, '#4a2c17'); wg.addColorStop(1, '#3a2010');
+      ctx.fillStyle = wg; ctx.fillRect(bx0, ext.y0, bw, 44 - ext.y0);
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
+      for (let j = 0; j < 3; j++) { const yy = 12 + j * 11; ctx.beginPath(); ctx.moveTo(bx0, yy); ctx.bezierCurveTo(90, yy + 3, 250, yy - 4, ext.x1, yy + 2); ctx.stroke(); }
+      ctx.fillStyle = '#1c0f07'; ctx.fillRect(bx0, 41, bw, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(bx0, 44, bw, 6);
+    }
     // フィーバーのメーター（上の欄の下の細い帯）
     const F = YG.CFG;
     if (g.R.fever) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(ext.x0, 44, ext.x1 - ext.x0, 6); }
@@ -800,9 +811,7 @@
     ctx.save(); ctx.translate(262, 18); ctx.scale(pop, pop);
     YD.say(ctx, rk.key, 0, 7, 20, col[0] === '#6b6b6b' ? '#ddd' : col[0], { big: true, lw: 5.5 });
     ctx.restore();
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 34, 48, 4);
-    if (nx) { ctx.fillStyle = col[0]; ctx.fillRect(238, 34, 48 * Math.min(1, (g.score - rk.min) / (nx.min - rk.min)), 4); }
-    else { ctx.fillStyle = col[0]; ctx.fillRect(238, 34, 48, 4); }
+
     }
     if (rankPop > 0) { // ランクアップの知らせ
       ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
@@ -821,8 +830,7 @@
       ctx.restore();
       const nd = YG.starNeed(g.stage, g.up.steps);
       const lo = n ? nd[n - 1] : 0, hi = nd[Math.min(2, n)];
-      ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(238, 32, 48, 4);
-      ctx.fillStyle = '#ffd84d'; ctx.fillRect(238, 32, 48 * (n >= 3 ? 1 : Math.max(0, Math.min(1, (g.stats.ok - lo) / (hi - lo)))), 4);
+      void lo; void hi;
       if (rankPop > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(1, rankPop * 2);
         ctx.font = '14px "Potta One", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center';
@@ -866,8 +874,8 @@
     lx = Math.max(70, 26 + ctx.measureText(String(g.score)).width + 10); // 点の桁が増えても重ならない
     }
     if (g.combo >= 2) {
-      ctx.save(); ctx.translate(lx, 20); ctx.scale(1 + comboPop * 0.4, 1 + comboPop * 0.4);
-      YD.say(ctx, g.combo + 'コンボ', 0, 0, 15, '#ff9a3f', { big: true, align: 'left', lw: 5 });
+      ctx.save(); ctx.translate(lx, 24); ctx.rotate(-0.08); ctx.scale(1 + comboPop * 0.4, 1 + comboPop * 0.4);
+      YD.say(ctx, g.combo + 'コンボ', 0, 0, 18, '#ff9a3f', { big: true, align: 'left', lw: 5.5 });
       ctx.restore();
     }
     const busy = YG.activeCount(g);
@@ -886,19 +894,14 @@
       else { ctx.font = '10px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', 327, 16); ctx.beginPath(); ctx.moveTo(322, 9); ctx.lineTo(332, 19); ctx.stroke(); } // 音楽だけ消した
     }
     if (g.state === 'ready') {
-      YD.say(ctx, '1枚置いたら スタート！ ' + g.R.duration + '秒', 200, 250, 16, '#fff', { lw: 5 });
-      if (g.stage) {
-        const st = YG.STAGES[g.stage - 1];
-        ctx.font = '15px "Potta One", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
-        ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
-        const tx = 'ステージ' + g.stage + '「' + st.name + '」';
-        ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
-      } else if (g.shopSteps) { // 道具を強くした人にだけ：本番では効かないと知らせる
-        ctx.font = '13px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.fillStyle = '#ffd84d';
-        ctx.lineWidth = 4; ctx.strokeStyle = '#3a0e00';
-        const tx = '本番は道具なし・腕だけの勝負';
-        ctx.strokeText(tx, 200, 214); ctx.fillText(tx, 200, 214);
-      }
+      const gy = L.grill.y + L.grill.h / 2, bob = Math.sin(t * 4) * 3;
+      ctx.save(); ctx.translate(200, gy - 22 + bob); ctx.rotate(-0.04);
+      if (g.stage) YD.say(ctx, YG.STAGES[g.stage - 1].name, 0, 0, 30, '#ffd84d', { big: true, lw: 8 });
+      else YD.say(ctx, '本番', 0, 0, 34, '#ffd84d', { big: true, lw: 8 });
+      ctx.restore();
+      YD.say(ctx, '肉を1枚置いたら スタート', 200, gy + 20, 17, '#fff', { lw: 5.5 });
+      YD.say(ctx, g.R.duration + '秒', 200, gy + 46, 17, '#ffe2bf', { lw: 5.5 });
+      if (!g.stage && g.shopSteps) YD.say(ctx, '本番は道具なし。腕だけの勝負', 200, gy + 76, 14, '#ffd84d', { lw: 4.5 }); // 道具を強くした人にだけ
     }
   }
   // 説明：やることを、その場所に1つずつ出す。指が動いて、どう触るかを見せる

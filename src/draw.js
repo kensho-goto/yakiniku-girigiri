@@ -227,9 +227,9 @@
     ctx.fillStyle = g;
     ctx.fillRect(X0, Y0, X1 - X0, L.counterY - Y0);
     // ちょうちん
-    for (const [x, c] of noLantern ? [] : [[30, '#d8402c'], [370, '#d8402c']]) {
+    for (const [x, c] of noLantern ? [] : [[16, '#d8402c'], [384, '#d8402c']]) {
       const sw = Math.sin(t * 1.3 + x) * 0.05;
-      ctx.save(); ctx.translate(x, 58); ctx.rotate(sw);
+      ctx.save(); ctx.translate(x, 56); ctx.rotate(sw); ctx.scale(0.82, 0.82);
       const glow = ctx.createRadialGradient(0, 20, 8, 0, 20, 46);
       glow.addColorStop(0, 'rgba(255,140,60,0.28)'); glow.addColorStop(1, 'rgba(255,140,60,0)');
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 20, 46, 0, 7); ctx.fill();
@@ -238,6 +238,37 @@
       for (let i = -12; i <= 12; i += 6) { ctx.beginPath(); ctx.ellipse(0, 20 + i, 16 * Math.sqrt(1 - (i / 22) ** 2), 1, 0, 0, 7); ctx.stroke(); }
       ctx.fillStyle = '#222'; ctx.fillRect(-8, -3, 16, 4); ctx.fillRect(-8, 40, 16, 4);
       ctx.fillStyle = '#fff3d6'; ctx.font = '13px "Yusei Magic", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('肉', 0, 25);
+      ctx.restore();
+    }
+    // 横に広い画面：焼肉屋の排気ダクトと柱で、左右の空きを店にする
+    if (X0 < -24 || X1 > W + 24) {
+      ctx.save(); ctx.lineJoin = 'round';
+      [[-8, -1], [W + 8, 1]].forEach(([px, side]) => { // 柱
+        if ((side < 0 && X0 > -10) || (side > 0 && X1 < W + 10)) return;
+        const pw = 16, xx = side < 0 ? px - pw : px;
+        const pg = ctx.createLinearGradient(xx, 0, xx + pw, 0); pg.addColorStop(0, '#3a2010'); pg.addColorStop(0.5, '#5a3418'); pg.addColorStop(1, '#2e180a');
+        ctx.fillStyle = pg; ctx.fillRect(xx, Y0, pw, Y1 - Y0);
+      });
+      for (let k = 1; k < 8; k++) for (const side of [-1, 1]) {
+        const dx = side < 0 ? -k * 150 + 40 : W + k * 150 - 40;
+        if (dx < X0 - 60 || dx > X1 + 60) continue;
+        const hood = 96 + 14 * Math.sin(k * 2.1), dy = 120 + 16 * Math.cos(k);
+        // 天井からのパイプ
+        const pg = ctx.createLinearGradient(dx - 14, 0, dx + 14, 0); pg.addColorStop(0, '#5d646b'); pg.addColorStop(0.45, '#c3cad1'); pg.addColorStop(1, '#6b737a');
+        ctx.fillStyle = pg; ctx.fillRect(dx - 14, Y0, 28, dy - Y0);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2;
+        for (let yy = dy - 30; yy > Y0; yy -= 46) { ctx.beginPath(); ctx.moveTo(dx - 14, yy); ctx.lineTo(dx + 14, yy); ctx.stroke(); }
+        // ラッパのような吸い込み口
+        const hg = ctx.createLinearGradient(dx - hood / 2, 0, dx + hood / 2, 0); hg.addColorStop(0, '#59606a'); hg.addColorStop(0.4, '#d3d9df'); hg.addColorStop(1, '#5f666d');
+        ctx.fillStyle = hg; ctx.strokeStyle = '#1c1612'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(dx - 14, dy - 2); ctx.lineTo(dx - hood / 2, dy + 40); ctx.lineTo(dx + hood / 2, dy + 40); ctx.lineTo(dx + 14, dy - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#1c1612'; ctx.beginPath(); ctx.ellipse(dx, dy + 40, hood / 2, 6, 0, 0, 7); ctx.fill();
+        // 下に七輪（よその席）の明かり
+        const lg = ctx.createRadialGradient(dx, L.counterY - 6, 4, dx, L.counterY - 6, 70); lg.addColorStop(0, 'rgba(255,120,40,0.32)'); lg.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(dx, L.counterY - 6, 70, 0, 7); ctx.fill();
+        ctx.strokeStyle = `rgba(255,255,255,${0.12 + 0.06 * Math.sin(t * 1.5 + k)})`; ctx.lineWidth = 6; ctx.lineCap = 'round'; // 立ちのぼる煙
+        ctx.beginPath(); ctx.moveTo(dx, L.counterY - 20); ctx.bezierCurveTo(dx - 16, L.counterY - 50, dx + 16, dy + 80, dx, dy + 46); ctx.stroke();
+      }
       ctx.restore();
     }
     // カウンター
@@ -339,7 +370,7 @@
       const x = L.slotX[c], y = G.y + 14;
       const nf = FIRE_FLAMES[fn];
       for (let i = 0; i < nf; i++) drawFlame(ctx, x - 24 + i * 10, y + 8, 5, 14, 1);
-      say(ctx, FIRE_LABEL[fn], x - 24 + nf * 10 + 1, y + 6, 14, FIRE_COLOR[fn], { align: 'left', lw: 4 });
+      say(ctx, FIRE_LABEL[fn], x - 24 + nf * 10 + 1, y + 7, 15, FIRE_COLOR[fn], { align: 'left', lw: 5.5 });
     }
   }
   function drawFlame(ctx, x, y, w, h, a) {
@@ -411,16 +442,17 @@
   function drawJunkBadge(ctx, x, y, t) {
     const p = 1 + 0.1 * Math.max(0, Math.sin(t * 7));
     ctx.save(); ctx.translate(x, y); ctx.scale(p, p);
-    ctx.fillStyle = '#e8402a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, 0, 15, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.lineCap = 'round'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.moveTo(6, -6); ctx.lineTo(-6, 6); ctx.stroke();
+    ctx.rotate(-0.12); ctx.lineCap = 'round';
+    const xs = () => { ctx.beginPath(); ctx.moveTo(-11, -12); ctx.quadraticCurveTo(-1, -2, 12, 11); ctx.moveTo(11, -12); ctx.quadraticCurveTo(2, -1, -10, 12); };
+    ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 11; xs(); ctx.stroke();
+    ctx.strokeStyle = '#ff3b2a'; ctx.lineWidth = 6; xs(); ctx.stroke();
     ctx.restore();
   }
   function drawTrash(ctx, t, o) {
     const b = L.trash;
     ctx.save(); ctx.translate(b.x, b.y);
     if (o && o.shake) ctx.rotate(Math.sin(t * 40) * 0.08);
+    if (o && o.hint) { ctx.shadowColor = `rgba(255,216,77,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.shadowBlur = 22; }
     ctx.fillStyle = '#7d858c';
     ctx.beginPath(); ctx.moveTo(-26, -22); ctx.lineTo(26, -22); ctx.lineTo(21, 30); ctx.lineTo(-21, 30); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5b6268';
@@ -429,10 +461,6 @@
     ctx.fillStyle = '#222';
     for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(-14 + i * 9, -27, 6, 4, i, 0, 7); ctx.fill(); }
     ctx.save(); ctx.rotate(-0.06); say(ctx, 'すてる', 0, 14, 14, '#f4f1ea', { lw: 4, stroke: '#3c4247' }); ctx.restore();
-    if (o && o.hint) {
-      ctx.strokeStyle = `rgba(255,225,77,${0.5 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
-      roundRect(ctx, -34, -36, 68, 90, 10); ctx.stroke(); ctx.setLineDash([]);
-    }
     ctx.restore();
   }
   const UNLOCK_AT = { kalbi: 2, harami: 5 }; // ステージで使えるようになる肉
@@ -446,20 +474,29 @@
   // allowed：このステージで使える肉（無ければ全部）。使えない肉は鍵と「ステージN〜」
   function drawTray(ctx, t, held, toku, allowed) {
     const y = L.trayY;
-    ctx.fillStyle = '#c99b62';
-    roundRect(ctx, 10, y - 52, 380, 106, 14); ctx.fill();
-    ctx.fillStyle = '#b4854f';
-    roundRect(ctx, 18, y - 44, 364, 90, 10); ctx.fill();
+    // 木の盆：墨の線のふち・木目・板の継ぎ目
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; roundRect(ctx, 12, y - 46, 380, 106, 16); ctx.fill();
+    const wg = ctx.createLinearGradient(0, y - 52, 0, y + 54);
+    wg.addColorStop(0, '#d6a86c'); wg.addColorStop(1, '#b8874f');
+    ctx.fillStyle = wg; roundRect(ctx, 10, y - 52, 380, 106, 16); ctx.fill();
+    ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.save(); roundRect(ctx, 10, y - 52, 380, 106, 16); ctx.clip();
+    ctx.strokeStyle = 'rgba(90,50,18,0.28)'; ctx.lineWidth = 1.2;
+    for (let j = 0; j < 7; j++) { const yy = y - 44 + j * 15; ctx.beginPath(); ctx.moveTo(10, yy); ctx.bezierCurveTo(110, yy + 5 * Math.sin(j), 260, yy - 5, 390, yy + 2 * Math.cos(j)); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(70,36,10,0.45)'; ctx.lineWidth = 2;
+    [104.5, 199.5, 294.5].forEach((xx) => { ctx.beginPath(); ctx.moveTo(xx, y - 52); ctx.lineTo(xx, y + 54); ctx.stroke(); });
+    ctx.restore(); ctx.restore();
     for (let i = 0; i < 4; i++) {
       const type = YG.TRAY_KEYS[i];
       const x = L.trayX[i];
       const special = type === 'toku';
       const locked = !special && allowed && !allowed.includes(type);
       const open = special ? toku > 0 : !locked;
-      if (special) {
-        // 特上の台：金色。審査員がいるときだけ光る
-        ctx.fillStyle = open ? `rgba(255,216,77,${0.55 + 0.25 * Math.sin(t * 6)})` : 'rgba(60,35,15,0.5)';
-        roundRect(ctx, x - 44, y - 46, 88, 94, 10); ctx.fill();
+      if (special && open) { // 特上：審査員がいるときだけ、金色の光
+        const gl = ctx.createRadialGradient(x, y - 6, 6, x, y - 6, 52);
+        gl.addColorStop(0, `rgba(255,226,110,${0.75 + 0.2 * Math.sin(t * 6)})`); gl.addColorStop(1, 'rgba(255,200,60,0)');
+        ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y - 6, 52, 0, 7); ctx.fill();
       }
       ctx.save();
       if (!open) ctx.globalAlpha = 0.35;
@@ -467,17 +504,20 @@
       ctx.beginPath(); ctx.ellipse(x + 18, y - 16, 18, 8, -0.5, 0, 7); ctx.fill();
       drawMeat(ctx, trayMeat(type), x, y - 6, { scale: 0.66, t, selected: held === type });
       ctx.restore();
-      // 木のトレーに焼印で書いたような名前
-      ctx.fillStyle = 'rgba(58,28,8,0.92)'; ctx.textAlign = 'center';
+      // 盆に焼印で書いたような名前
+      ctx.fillStyle = open ? 'rgba(58,28,8,0.92)' : 'rgba(58,28,8,0.45)'; ctx.textAlign = 'center';
       ctx.font = `${special ? 14 : 17}px "Yusei Magic", "Hiragino Sans", sans-serif`;
       ctx.fillText(special ? '特上カルビ' : YG.TYPES[type].name, x, y + 36);
       if (special && open) say(ctx, '×' + toku, x + 30, y - 22, 16, '#ffe58a', { big: true, lw: 4 });
-      else if (locked && UNLOCK_AT[type]) say(ctx, 'ステージ' + UNLOCK_AT[type], x, y - 26, 12, '#f4e3c8', { lw: 3.5 });
-      if (!open) { // 鍵
-        ctx.fillStyle = '#3a2410';
-        roundRect(ctx, x - 10, y - 12, 20, 16, 3); ctx.fill();
-        ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(x, y - 12, 6, Math.PI, 0); ctx.stroke();
+      if (!open) { // 鍵。開くステージの数字を鍵に書く
+        ctx.save(); ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(x, y - 14, 8, Math.PI, 0); ctx.stroke();
+        ctx.strokeStyle = '#c9a44a'; ctx.lineWidth = 3.5; ctx.stroke();
+        ctx.fillStyle = '#e0b84e'; ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 2.5;
+        roundRect(ctx, x - 13, y - 15, 26, 22, 4); ctx.fill(); ctx.stroke();
+        if (locked && UNLOCK_AT[type]) { ctx.fillStyle = '#2a1206'; ctx.font = '15px "Potta One", "Hiragino Sans", sans-serif'; ctx.fillText(String(UNLOCK_AT[type]), x, y + 3); }
+        else { ctx.fillStyle = '#2a1206'; ctx.beginPath(); ctx.arc(x, y - 6, 3, 0, 7); ctx.fill(); }
+        ctx.restore();
       }
     }
   }
@@ -487,19 +527,22 @@
   function drawCustomer(ctx, seat, i, t, react) {
     if (seat.state === 'closed') { // このステージでは使わない席：のれんに「準備中」
       const x = L.seatX[i];
-      // 使わない席：いすを机の上にさかさに上げてある
-      ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#4a2c18'; ctx.strokeStyle = '#1e0f06'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(x, L.counterY - 40, 24, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
-      [-16, 16].forEach((d) => { ctx.beginPath(); ctx.moveTo(x + d * 0.8, L.counterY - 38); ctx.lineTo(x + d, L.counterY - 4); ctx.stroke(); });
-      ctx.restore();
-      return;
+      return; // 使わない席：何も置かない（暗い店の奥）
     }
     if (seat.state === 'empty') { // 空いた席：いすの背もたれと「空席」
       const x = L.seatX[i];
-      // 空いた席：いすの背もたれがのぞく
-      ctx.fillStyle = 'rgba(74,44,24,0.75)'; ctx.strokeStyle = 'rgba(20,10,4,0.8)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x - 26, L.counterY); ctx.lineTo(x - 24, L.counterY - 30); ctx.quadraticCurveTo(x, L.counterY - 46, x + 24, L.counterY - 30); ctx.lineTo(x + 26, L.counterY); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,220,180,0.12)'; ctx.beginPath(); ctx.moveTo(x - 16, L.counterY - 30); ctx.quadraticCurveTo(x, L.counterY - 40, x + 16, L.counterY - 30); ctx.stroke();
+      // 空いた席：カウンターに湯のみとおしぼり（次の客を待っている）
+      const cy = L.counterY + 2;
+      ctx.save(); ctx.lineJoin = 'round';
+      ctx.fillStyle = '#f2ece0'; ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 2; // おしぼり
+      ctx.beginPath(); ctx.ellipse(x + 16, cy - 4, 14, 5, -0.08, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(42,18,6,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 6, cy - 6); ctx.lineTo(x + 26, cy - 4); ctx.stroke();
+      ctx.fillStyle = '#5c7a5a'; ctx.strokeStyle = '#2a1206'; ctx.lineWidth = 2; // 湯のみ
+      ctx.beginPath(); ctx.moveTo(x - 24, cy - 26); ctx.lineTo(x - 22, cy - 2); ctx.quadraticCurveTo(x - 16, cy + 1, x - 8, cy - 2); ctx.lineTo(x - 6, cy - 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#7d9a78'; ctx.beginPath(); ctx.ellipse(x - 15, cy - 26, 9, 3, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,255,${0.25 + 0.1 * Math.sin(t * 2 + i)})`; ctx.lineWidth = 2; // 湯気
+      ctx.beginPath(); ctx.moveTo(x - 15, cy - 32); ctx.bezierCurveTo(x - 20, cy - 40, x - 10, cy - 44, x - 15, cy - 54); ctx.stroke();
+      ctx.restore();
       return;
     }
     const c = seat.cust || {};
@@ -575,7 +618,7 @@
       ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(-5, -3, 5, 4, 0.3, 0, 7); ctx.fill();
       ctx.fillStyle = '#f4b6c2'; ctx.beginPath(); ctx.ellipse(0, 6, 8, 5, 0, 0, 7); ctx.fill();
       ctx.fillStyle = '#222'; ctx.fillRect(-3, 4, 2, 3); ctx.fillRect(2, 4, 2, 3);
-      ctx.fillStyle = '#fff'; ctx.font = '11px "Yusei Magic", sans-serif'; ctx.textAlign = 'left'; ctx.fillText('モー', 14, -6);
+      say(ctx, 'モー', 14, -6, 14, '#fff', { align: 'left', lw: 4 });
       ctx.restore();
     }
     ctx.restore();
@@ -709,7 +752,7 @@
     if (seat.state !== 'wait') return;
     const c = seat.cust;
     const x = L.seatX[i], y = 82;
-    const w = 118, h = 70;
+    const w = 114, h = 70;
     const k = Math.max(0, Math.min(1, c.patience / c.maxPatience));
     ctx.save();
     if (k < 0.4) ctx.translate(Math.sin(t * (k < 0.15 ? 40 : 22)) * (k < 0.15 ? 2.5 : 1.2), 0); // 待ちきれない：ふるえる
@@ -720,26 +763,40 @@
     if (opts && opts.target) { ctx.lineWidth = 1.5; ctx.strokeStyle = '#2a1206'; blob(ctx, x, y, w + 7, h + 7, i + 1, 0); ctx.stroke(); }
     if (c.vip) say(ctx, '点×' + YG.CFG.vipMult, x + 44, y + h / 2 + 18, 15, '#ffd84d', { big: true, lw: 4.5 });
     // 焼き色の見本（どの肉でも同じ目安として、カルビで見せる）
-    drawMeat(ctx, sampleMeat(c.order.target), x - 30, y - 6, { scale: 0.36 });
+    drawMeat(ctx, sampleMeat(c.order.target), x - 31, y - 7, { scale: 0.44 });
     ctx.fillStyle = '#2a1a10'; ctx.textAlign = 'center';
     ctx.font = '16px "Yusei Magic", "Hiragino Sans", sans-serif';
     ctx.fillText(YG.TARGET_NAME[c.order.target], x + 20, y - 4);
-    ctx.font = '12px "Yusei Magic", "Hiragino Sans", sans-serif';
-    ctx.fillStyle = c.order.type ? '#a3261b' : '#6a5a4a';
-    ctx.fillText(c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : 'どの肉でも', x + 20, y + 14);
-    if (!c.order.type && !(opts && opts.noPts)) { // どの肉でも：点がひかえめ（ステージは枚数なので出さない）
-      say(ctx, '点×' + YG.CFG.anyTypeMult, x + 44, y + h / 2 + 16, 13, '#e0d6ca', { lw: 4 });
-    }
+    ctx.font = '13.5px "Yusei Magic", "Hiragino Sans", sans-serif';
+    ctx.fillStyle = ctx.strokeStyle = c.order.type ? '#a3261b' : '#5a4a3a'; ctx.lineWidth = 0.7;
+    const tyText = c.order.type ? (c.order.type === 'toku' ? '特上で' : YG.TYPES[c.order.type].name + 'で') : 'なんでも';
+    ctx.strokeText(tyText, x + 21, y + 13); ctx.fillText(tyText, x + 21, y + 13);
+
     if (k < 0.15) { // もう帰る：頭の左上に赤い「！」
       const ex = x - 44, ey = L.headY - 34;
       ctx.fillStyle = '#e0302a'; ctx.beginPath(); ctx.arc(ex, ey, 11, 0, 7); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = '16px "Yusei Magic", "Hiragino Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', ex, ey + 6);
     }
     // 待ちの残り（長さと色）
-    const bw = w - 20;
-    ctx.fillStyle = '#e6dccb'; roundRect(ctx, x - bw / 2, y + h / 2 - 12, bw, 6, 3); ctx.fill();
-    ctx.fillStyle = k < 0.15 ? '#e0302a' : k < 0.4 ? '#f0a020' : '#4caf50';
-    roundRect(ctx, x - bw / 2, y + h / 2 - 12, Math.max(4, bw * k), 6, 3); ctx.fill();
+    for (let j = 0; j < 4; j++) {
+      const fill = Math.max(0, Math.min(1, k * 4 - j));
+      const hx = x - 27 + j * 18, hy = y + h / 2 - 12;
+      const blink = k < 0.15 && fill > 0 && Math.sin(t * 16) > 0;
+      heart(ctx, hx, hy, 6.5, '#d8cbb8', 1);
+      if (fill > 0 && !blink) heart(ctx, hx, hy, 6.5, k < 0.4 ? '#ff7a3a' : '#e8344a', fill);
+    }
+    ctx.restore();
+  }
+  // ハート（fill：左から何割まで塗るか）
+  function heart(ctx, x, y, r, col, fill) {
+    ctx.save();
+    if (fill < 1) { ctx.beginPath(); ctx.rect(x - r - 2, y - r - 2, (r * 2 + 4) * fill, r * 2 + 4); ctx.clip(); }
+    ctx.beginPath();
+    ctx.moveTo(x, y + r * 0.9);
+    ctx.bezierCurveTo(x - r * 1.5, y - r * 0.1, x - r * 0.7, y - r * 1.2, x, y - r * 0.45);
+    ctx.bezierCurveTo(x + r * 0.7, y - r * 1.2, x + r * 1.5, y - r * 0.1, x, y + r * 0.9);
+    ctx.fillStyle = col; ctx.fill();
+    if (fill >= 1) { ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(42,18,6,0.55)'; ctx.stroke(); }
     ctx.restore();
   }
   // 反応の吹き出し
@@ -784,10 +841,12 @@
   function say(ctx, text, x, y, size, fill, o) {
     o = o || {};
     ctx.font = size + 'px ' + (o.big ? '"Potta One", "Hiragino Sans", sans-serif' : '"Yusei Magic", "Hiragino Sans", sans-serif');
+    const ls = 'letterSpacing' in ctx; if (ls) ctx.letterSpacing = o.big ? '-0.04em' : '0px'; // 太い字は字の間があきすぎるので詰める
     ctx.textAlign = o.align || 'center'; ctx.lineJoin = 'round';
     ctx.lineWidth = o.lw != null ? o.lw : Math.max(3, size * 0.32); ctx.strokeStyle = o.stroke || '#2a1206';
     if (ctx.lineWidth > 0) ctx.strokeText(text, x, y);
     ctx.fillStyle = fill; ctx.fillText(text, x, y);
+    if (ls) ctx.letterSpacing = '0px';
   }
   // 手で描いたような吹き出し（少しゆがんだ丸み・太い墨の線・しっぽ）。seed で形が席ごとに変わる
   function blob(ctx, x, y, w, h, seed, tail) {

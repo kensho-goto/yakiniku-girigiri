@@ -12,9 +12,13 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>ジュー（焼肉）</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Potta+One&family=Yusei+Magic&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/PottaOne.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/YuseiMagic.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* 字はゲームの中に入れてある（使う字だけ。電波が悪くても出る）。OFL：fonts/OFL-*.txt */
+  @font-face { font-family: 'Potta One'; src: url(fonts/PottaOne.woff2) format('woff2'); font-display: swap; }
+  @font-face { font-family: 'Yusei Magic'; src: url(fonts/YuseiMagic.woff2) format('woff2'); font-display: swap; }
+</style>
 <style>
   :root { --num: 'Potta One', 'Hiragino Sans', sans-serif; --hand: 'Yusei Magic', 'Hiragino Sans', sans-serif; --fire: #ff7a2f; --gold: #ffd84d; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -39,7 +43,7 @@
   /* タイトルは箱を使わない：店の絵の上に、ふちの太い手書きの文字をじかに置く */
   #title { --ink: #2a1206; }
   #title .logo { text-shadow: -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 0 9px 0 #a3261b, 0 0 30px rgba(255,120,40,.7); }
-  #title .logo small { color: #fff; text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink); transform: rotate(2deg); }
+  #title .logo small { font-family: var(--num); font-size: 24px; letter-spacing: .25em; color: #ff5a3a; text-shadow: var(--o2); transform: rotate(4deg) translateX(-60px); }
   #title .card { position: absolute; left: 0; right: 0; bottom: 2px; width: auto; max-height: none; padding: 0 12px 6px; background: none; border: 0; box-shadow: none; border-radius: 0; overflow: visible; }
   #title .stage-next { margin: 0; font-size: 15px; color: #fff; text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
   #title .stage-next b { font-size: 17px; }
@@ -53,7 +57,17 @@
   #title .best:empty { display: none; }
   #title .tiny { display: inline-block; margin: 0 8px; padding: 2px 2px; font-size: 16px; white-space: nowrap; color: #ffe2bf; text-decoration: none;
     text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
-  #title .badge { margin-left: 2px; padding: 0; background: none; border-radius: 0; font-family: var(--num); font-size: 18px; color: #ff6a4a; vertical-align: 2px; }
+  #title .badge { margin-left: 0; padding: 0; background: none; border-radius: 0; font-size: inherit; color: #ff8a5a; vertical-align: 0; }
+  #title .card { pointer-events: none; } #title .card > * { pointer-events: auto; }
+  #title .tboss { position: absolute; left: 6px; bottom: 34px; width: 92px; pointer-events: none; }
+  #title .tboss img { width: 92px; display: block; }
+  #title .tboss span { position: absolute; left: 4px; top: -22px; white-space: nowrap; font-size: 14px; color: #fff; transform: rotate(-6deg); text-shadow: var(--o2); }
+  /* ロゴ：ジューと鳴るように、ときどき震える。上に湯気 */
+  #title .logo { animation: ju 2.6s ease-in-out infinite; }
+  @keyframes ju { 0%, 70%, 100% { transform: rotate(-3deg); } 74% { transform: rotate(-4.5deg) translateX(-2px); } 78% { transform: rotate(-1.5deg) translateX(2px); } 82% { transform: rotate(-4deg) translateX(-1px); } 86% { transform: rotate(-3deg); } }
+  #title .tband::before, #title .tband::after { content: ''; position: absolute; top: 18px; width: 18px; height: 46px; border-radius: 50%; border-left: 4px solid rgba(255,255,255,.35); filter: blur(1.5px); animation: steam 2.4s ease-in infinite; }
+  #title .tband::before { left: 150px; } #title .tband::after { left: 232px; animation-delay: 1.2s; }
+  @keyframes steam { 0% { transform: translateY(16px) scaleY(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-18px) scaleY(1.2) skewX(-12deg); opacity: 0; } }
   #title .tiny:nth-of-type(odd) { transform: rotate(-2deg); } #title .tiny:nth-of-type(even) { transform: rotate(2deg); }
   #title .pt-name { margin-top: 6px; padding: 8px 10px; }
   .flow { flex-wrap: nowrap; }
@@ -282,8 +296,9 @@
   <div class="card">
     <div class="stage-next" id="titleStage"></div>
     <div id="ptNameBox" hidden><input id="ptName" class="field pt-name" type="text" maxlength="20" autocomplete="off" placeholder="あなたの名前。あだ名でいい"></div>
+    <div class="tboss"><span>へい、らっしゃい！</span><img id="titleBoss" alt=""></div>
     <button class="btn" id="startBtn">焼く</button>
-    <button class="tiny" id="stageBtn">ステージ・本番をえらぶ</button><button class="tiny" id="toolBtn">道具</button>
+    <button class="tiny" id="stageBtn">ステージをえらぶ</button><button class="tiny" id="toolBtn">道具</button>
     <button class="tiny" id="ptNextTitle" hidden title="名前と記録を消して、はじめから">次の人に渡す</button>
   </div>
  </div>
