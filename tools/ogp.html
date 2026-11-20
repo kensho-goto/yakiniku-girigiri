@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- X・LINE に貼ったときの絵（1200×630）の元。tools/ogp.js がゲームを撮って shot.png を作り、この画面を撮って ogp.png にする -->
+<style>
+@font-face { font-family: 'Potta One'; src: url(../fonts/PottaOne.woff2); }
+@font-face { font-family: 'Yusei Magic'; src: url(../fonts/YuseiMagic.woff2); }
+html, body { margin: 0; }
+.og { position: relative; width: 1200px; height: 630px; overflow: hidden; background: #1a100c; }
+.bg { position: absolute; inset: -40px; background: url(shot.png) center 62% / 1300px auto; filter: blur(14px) brightness(.45) saturate(1.2); }
+.glow { position: absolute; left: -100px; top: 120px; width: 760px; height: 560px; background: radial-gradient(closest-side, rgba(255,110,30,.45), transparent); }
+.ph { position: absolute; right: 70px; top: 38px; width: 330px; height: 642px; border-radius: 34px; overflow: hidden; transform: rotate(5deg);
+  border: 10px solid #120a07; box-shadow: 0 30px 60px rgba(0,0,0,.6); background: url(shot.png) center top / 100% auto; }
+.yu { position: absolute; left: 92px; top: 92px; font: 60px 'Potta One'; letter-spacing: .3em; color: #ff5a3a; transform: rotate(-4deg);
+  text-shadow: -4px -4px 0 #2a1206, 4px -4px 0 #2a1206, -4px 4px 0 #2a1206, 4px 4px 0 #2a1206, 0 6px 0 #2a1206; }
+.ju { position: absolute; left: 60px; top: 150px; font: 210px/1 'Potta One'; letter-spacing: -.06em; color: #ffd84d; transform: rotate(-5deg);
+  text-shadow: -9px -9px 0 #2a1206, 9px -9px 0 #2a1206, -9px 9px 0 #2a1206, 9px 9px 0 #2a1206, 0 -10px 0 #2a1206, 0 10px 0 #2a1206, -10px 0 0 #2a1206, 10px 0 0 #2a1206, 0 24px 0 #a3261b, 0 0 70px rgba(255,140,40,.8); }
+.cp { position: absolute; left: 92px; top: 432px; font: 44px/1.35 'Yusei Magic'; color: #fff; transform: rotate(-2deg);
+  text-shadow: -3px -3px 0 #2a1206, 3px -3px 0 #2a1206, -3px 3px 0 #2a1206, 3px 3px 0 #2a1206, 0 4px 0 #2a1206; }
+.cp b { font-weight: 400; color: #ffd84d; }
+.cp i { font-style: normal; color: #ff7a5a; }
+</style></head><body>
+<div class="og"><div class="bg"></div><div class="glow"></div><div class="ph"></div>
+<div class="yu">焼肉</div><div class="ju">ジュー</div>
+<div class="cp">早いと<b>生</b>、遅いと<i>焦げ</i>。<br>注文どおりに焼いて出せ</div></div>
+</body></html>

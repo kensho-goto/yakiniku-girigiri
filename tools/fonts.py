@@ -14,7 +14,7 @@ SRC = {
 
 def used_chars():
     chars = set()
-    for f in glob.glob(ROOT + '/src/*.js') + [ROOT + '/index.html'] + glob.glob(ROOT + '/play/*.html'):
+    for f in glob.glob(ROOT + '/src/*.js') + glob.glob(ROOT + '/*.html') + glob.glob(ROOT + '/play/*.html'):
         chars |= set(open(f, encoding='utf-8').read())
     chars |= set(chr(c) for c in range(0x20, 0x7f))
     chars |= set(chr(c) for c in range(0x3000, 0x3100))   # 記号・ひらがな・カタカナ

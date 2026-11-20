@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="焼肉屋の網をまかされた。客の注文どおりに焼いて出せ。早いと生、遅いと焦げ。スマホで遊べる焼き加減のクソゲー。">
+<link rel="canonical" href="https://kensho-goto.github.io/yakiniku-girigiri/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ジュー">
+<meta property="og:title" content="ジュー｜焼き加減を見きわめろ">
+<meta property="og:description" content="客の注文どおりに焼いて出せ。早いと生、遅いと焦げ。スマホでそのまま遊べる焼肉のクソゲー。">
+<meta property="og:url" content="https://kensho-goto.github.io/yakiniku-girigiri/">
+<meta property="og:image" content="https://kensho-goto.github.io/yakiniku-girigiri/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#2a1a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,7 +22,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
-<title>ジュー（焼肉）</title>
+<title>ジュー｜焼肉の焼き加減クソゲー</title>
 <link rel="preload" href="fonts/PottaOne.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/YuseiMagic.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -99,7 +110,6 @@
   .lessons small { display: block; color: #d9b896; margin-top: 2px; }
   .field { width: 100%; margin-top: 12px; padding: 12px; font-size: 20px; border-radius: 12px; border: 0; text-align: center; }
   .tip { color: #ffb3a0; min-height: 1.2em; font-size: 13px; }
-  #gate { z-index: 10; background: #2a1a14; }
   /* ランクの判子 */
   .rank { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 130px; padding: 6px 16px 8px; border-radius: 16px; border: 4px solid; margin-bottom: 4px; transform: rotate(-6deg); }
   .rank .rk { font-family: var(--num); font-size: 52px; line-height: 1; }
@@ -197,6 +207,9 @@
   .btn2 { margin: 10px 5px 0; padding: 6px 4px; background: none; border-radius: 0; color: #ffe2bf; font-size: 16px; white-space: nowrap; font-weight: 400; text-shadow: var(--o2); }
   .btn2:active { transform: translateY(2px) scale(.96); }
   .btn2.back::before { content: '← '; color: #ffd84d; }
+  .btn2.share { color: #ffd84d; font-size: 19px; transform: rotate(-2deg); }
+  .btn2.share::after { content: ' ↗'; font-size: 15px; }
+  #pause .about { display: block; margin: 18px auto 0; font-size: 13px; opacity: .8; }
   .tiny { color: #ffe2bf; font-size: 15px; text-decoration: none; text-shadow: var(--o2); }
   /* 選ぶ行：箱なし。絵＋文字 */
   .srow { margin-top: 2px; padding: 8px 12px; background: none; border-radius: 0; text-shadow: var(--o2); }
@@ -348,6 +361,7 @@
     <button class="btn" id="resumeBtn">つづける</button>
     <button class="btn2" id="retryBtn">はじめから</button>
     <button class="btn2" id="toTitleBtn">タイトルへ</button>
+    <a class="tiny about" href="about.html">このゲームについて</a>
   </div>
 </div>
 
@@ -360,6 +374,7 @@
     <div id="rNew"></div>
     <div class="best" id="rBest" style="margin-top:2px"></div>
     <button class="btn" id="againBtn">もう一回</button>
+    <div><button class="btn2 share" id="rShare">自慢する</button></div>
     <div><button class="btn2" id="rRetry" hidden>もう一回</button><button class="btn2" id="rStages" hidden>ステージをえらぶ</button><button class="btn2" id="rTitleBtn">タイトルへ</button></div>
     <div class="lvbox" id="rLevel"></div>
     <div class="lessons" id="rLessons"></div>
@@ -375,22 +390,12 @@
   スマホを縦にしてね
 </div>
 
-<div class="overlay" id="gate" hidden>
-  <div class="card">
-    <h1 class="logo" style="font-size:36px">ジュー</h1>
-    <p class="sub">合言葉を入れてね</p>
-    <input id="gateInput" class="field" type="text" autocomplete="off" autocapitalize="off" placeholder="合言葉">
-    <p class="tip" id="gateMsg">&nbsp;</p>
-    <button class="btn" id="gateBtn">はいる</button>
-  </div>
-</div>
-
 <script src="src/sim.js?v=dev"></script>
 <script src="src/lines.js?v=dev"></script>
 <script src="src/draw.js?v=dev"></script>
 <script src="src/sound.js?v=dev"></script>
-<script src="src/gate.js?v=dev"></script>
 <script src="src/playtest.js?v=dev"></script>
 <script src="src/main.js?v=dev"></script>
+<script src="src/count.js?v=dev"></script>
 </body>
 </html>

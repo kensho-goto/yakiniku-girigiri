@@ -193,6 +193,7 @@
     ['title', 'pause', 'result', 'stages', 'intro', 'levels', 'tools'].forEach((id) => { $(id).hidden = true; });
     YS.unlock();
     if (window.YP) YP.start(g);
+    if (window.YC) YC.hit(stage ? 'start-s' + stage : 'start-honban');
   }
   function pause(on) {
     if (!g || mode !== 'play' || g.state === 'over') return;
@@ -334,8 +335,27 @@
     else boss('resultBoss', st.served ? ['失敗なし。やるじゃないか。', '次はもっと置いて、にぎやかに。'] : ['だれにも出してないぞ。', '焼けたら皿へ。そして客へ。'], st.served ? 'grin' : 'hmm');
     $('ptFeedback').hidden = true;
     if (window.YP) YP.end(g, g.stage ? { key: 'S' + g.stage } : YG.shopRank(g), tt);
+    shareText = brag(tt);
+    if (window.YC) YC.hit(g.stage ? `end-s${g.stage}-star${YG.starsOf(g)}` : 'end-honban-' + YG.shopRank(g).key);
     $('result').hidden = false;
   }
+  // 自慢する：結果を X・LINE などに送る文
+  const GAME_URL = 'https://kensho-goto.github.io/yakiniku-girigiri/';
+  let shareText = '';
+  function brag(tt) {
+    if (g.stage) {
+      const k = g.stage, n = YG.starsOf(g);
+      return `焼肉のクソゲー「ジュー」\nステージ${k}「${YG.STAGES[k - 1].name}」${'★'.repeat(n)}${'☆'.repeat(3 - n)}\nうまく焼けた ${g.stats.ok}枚\n称号「${tt.name}」`;
+    }
+    const rk = YG.shopRank(g);
+    return `焼肉のクソゲー「ジュー」\n本番 ${rk.name}「${rk.word}」\n売上 ¥${g.score}\n称号「${tt.name}」`;
+  }
+  $('rShare').onclick = () => {
+    const text = shareText + '\n#ジュー焼肉';
+    if (window.YC) YC.hit('share');
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ text, url: GAME_URL }).catch(() => {}); return; }
+    open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(GAME_URL), '_blank', 'noopener');
+  };
   // ステージの結果：★と、次のステージが開いたか
   function showStageResult() {
     const k = g.stage, st = YG.STAGES[k - 1];

@@ -183,7 +183,7 @@ npm run playtest   # この Mac でゲームを動かし、期間限定のURLと
 - `src/main.js`：画面の流れ、タップとドラッグ、演出。1/60 秒ずつ固定の刻みで進めます。端末の速さで焼け方は変わりません。
 - `src/lines.js`：反応のセリフと顔。
 - `src/sound.js`：音（WebAudio で作る。ファイルなし）。
-- `src/gate.js`：合言葉の画面（localhost では出ない）。
+
 - `src/playtest.js`：試遊会の記録と感想（試遊サーバーがいるときだけ動く）。`tools/playtest.js`：試遊サーバー・QR・集計。
 - `manifest.json`・`icon-*.png`：ホーム画面に追加したときの名前とアイコン。
 - `tests/sim.test.js`：テスト。`tools/bot.js`：自動の遊び手。
