@@ -14,6 +14,7 @@
   let ptr = null; // 押している指
   let fx = []; // 演出（文字・粒）
   const react = [null, null, null]; // 客ごとの反応
+  const cuts = [null, null, null]; // 客に出した肉の断面（答え合わせ）{ e, at }
   let shake = 0;
   let endAt = 0;
   let tut = 0; // はじめての説明の段階（0〜4、4で終わり）
@@ -188,7 +189,7 @@
     // 説明：ステージ1は★1を取るまで毎回。本番などは、はじめての1回だけ
     tut = (stage === 1 && !(starsMap()[1] >= 1)) || store.get('yaki.tut', 0) < 4 ? 0 : 4;
     g = YG.newGame({ tutorial: tut < 4 && stage <= 1, stage, tools: store.get('yaki.tools', {}) });
-    held = null; ptr = null; fx = []; react.fill(null); shake = 0; endAt = 0; lastTick = -1;
+    held = null; ptr = null; fx = []; react.fill(null); cuts.fill(null); shake = 0; endAt = 0; lastTick = -1;
     banners = []; rankIdx = 0; rankPop = 0; comboPop = 0; resumeT = 0; tip = null; tipsDone = {}; prevState = null; warned10 = false;
     acc = 0; last = null;
     mode = 'play';
@@ -607,6 +608,7 @@
         const key = r.fail || r.rank;
         info.head = RANK_TEXT[key] || ''; // 評価は吹き出しの中に大きく（同じ言葉を2回出さない）
         react[ev.seat] = info;
+        cuts[ev.seat] = { e, at: clock };
         const x = L.seatX[ev.seat];
         const good = r.rank === 'perfect' || r.rank === 'great';
         if (g.stage) { if (YG.goodRank(r)) float(x, L.counterY + 22, jaen('+1枚', '+1', '+1片'), '#ffd84d', 20, 1.3); } // ステージは枚数で数える
@@ -735,6 +737,7 @@
       const seat = g.seats[i];
       const target = carryMeat && carryMeat.loc === 'plate' && seat.state === 'wait' && (!dragging || hitSeat(ptr, i));
       YD.drawOrder(ctx, seat, i, t, { target, noPts: !!g.stage });
+      if (seat.state === 'react' && cuts[i]) YD.drawCut(ctx, L.seatX[i], L.counterY + 2, cuts[i].e, clock - cuts[i].at);
       if (seat.state === 'react' || seat.state === 'leave') YD.drawReact(ctx, seat, i, react[i], t);
     }
     // 皿・炭入れ
