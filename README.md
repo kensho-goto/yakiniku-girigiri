@@ -20,7 +20,7 @@ node tools/bot.js  # 自動の遊び手で、作戦ごとの点の出方をく�
 
 ## Cloudflare に出す
 
-- 公開先：https://yakiniku-girigiri.kensho-goto.workers.dev （合言葉なし。GitHub Pages と同じ中身）
+- 公開先：https://yakiniku-girigiri.asobiba-games.workers.dev （合言葉なし。GitHub Pages と同じ中身）
 - 出し直すとき：`npm run deploy:cf`（テスト → `_site/` に集める → `wrangler deploy`）。この Mac の wrangler に、ブラウザでサインイン済みであること。
 - 載せるファイルを足したときは `tools/build-site.sh` の cp の行だけを直します（GitHub Pages もこれを使います）。
 

@@ -8,6 +8,6 @@
     "start": "python3 -m http.server 8130 --bind ::",
     "playtest": "node tools/playtest.js",
     "build:site": "bash tools/build-site.sh",
-    "deploy:cf": "npm test && bash tools/build-site.sh && wrangler deploy"
+    "deploy:cf": "npm test && SITE_URL=https://yakiniku-girigiri.asobiba-games.workers.dev/ bash tools/build-site.sh && wrangler deploy"
   }
 }

@@ -1,5 +1,5 @@
 // Cloudflare に出す設定（npm run deploy:cf）。
-// 公開先: https://yakiniku-girigiri.kensho-goto.workers.dev
+// 公開先: https://yakiniku-girigiri.asobiba-games.workers.dev
 {
   "name": "yakiniku-girigiri",
   "compatibility_date": "2026-11-01",
