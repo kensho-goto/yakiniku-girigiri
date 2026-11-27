@@ -4,3 +4,4 @@ playtest-data/
 tools/shot.png
 tools/shot-*.png
 dist/
+_site/
